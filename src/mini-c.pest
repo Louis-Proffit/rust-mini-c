@@ -1,0 +1,214 @@
+file = {
+    SOI ~ decl* ~ EOI
+}
+
+decl = {
+    decl_fun
+    | decl_struct
+}
+
+decl_struct = {
+    STRUCT~identifier~LBRACE~decl_var*~RBRACE~SEMICOLON
+}
+
+decl_var = {
+    (INT~identifier~(COMMA~identifier)*~SEMICOLON)
+    | (STRUCT~identifier~star_idents?~SEMICOLON)
+}
+
+star_ident={
+    STAR~identifier
+}
+
+star_idents={
+    star_ident~(COMMA~star_ident)*
+}
+
+decl_fun = {
+    formal~LPAR~formals?~RPAR~block
+}
+
+formals = {
+    formal~(COMMA~formal)*
+}
+
+formal = {
+    (INT~identifier)
+    | (STRUCT~identifier~STAR~identifier)
+}
+
+block={
+    LBRACE~(decl_var | stmt)*~RBRACE
+}
+
+stmt={
+    block
+    | expr_stmt
+    | selection_stmt
+    | iteration_stmt
+    | jump_stmt
+}
+
+expr_stmt={
+    expr?~SEMICOLON
+}
+
+selection_stmt={
+    IF~LPAR~expr~RPAR~stmt~(ELSE~stmt)?
+}
+
+iteration_stmt={
+    WHILE~LPAR~expr~RPAR~stmt
+}
+
+jump_stmt={
+    RETURN~expr?~SEMICOLON
+}
+
+primary_expression={
+    integer
+    | identifier
+    | LPAR~expr~RPAR
+}
+
+postfix_expression={
+    primary_expression~((LPAR~argument_expression_list?~RPAR) | (ARROW~identifier))*
+}
+
+argument_expression_list={
+    assign_expr~(COMMA~assign_expr)*
+}
+
+unary_expr={
+    postfix_expression
+    | unary_op~unary_expr
+    | sizeof_expr
+}
+
+sizeof_expr = {
+    SIZEOF~LPAR~STRUCT~identifier~RPAR
+}
+
+multiplicative_expr={
+    unary_expr~((STAR | DIV)~unary_expr)*
+}
+
+additive_expr={
+    multiplicative_expr~((PLUS | MINUS)~multiplicative_expr)*
+}
+
+relation_expr={
+    additive_expr~(comp_op~additive_expr)*
+}
+
+eq_expr={
+    relation_expr~(eq_op~relation_expr)*
+}
+
+and_expr={
+    eq_expr~("&&"~eq_expr)*
+}
+
+or_expr={
+    and_expr~("||"~and_expr)*
+}
+
+cond_expr={
+    or_expr
+}
+
+assign_expr={
+    unary_expr~EQ~assign_expr
+    | cond_expr
+}
+
+expr={
+    assign_expr
+}
+
+unary_op={
+    MINUS
+    | BANG
+}
+
+eq_op={
+    "=="
+    | "!="
+}
+
+comp_op={
+    "<="
+    | ">="
+    | "<"
+    | ">"
+}
+
+STRUCT=@{"struct"}
+INT=@{"int"}
+IF=@{"if"}
+ELSE=@{"else"}
+WHILE=@{"while"}
+RETURN=@{"return"}
+SIZEOF=@{"sizeof"}
+PLUS=@{"+"}
+MINUS=@{"-"}
+DIV=@{"/"}
+BANG=@{"!"}
+ARROW=@{"->"}
+EQ=@{"="}
+LBRACE=@{"{"}
+RBRACE=@{"}"}
+LPAR=@{"("}
+RPAR=@{")"}
+SEMICOLON=@{";"}
+STAR=@{"*"}
+COMMA=@{","}
+
+keyword={
+    STRUCT
+    | INT
+    | IF
+    | ELSE
+    | WHILE
+    | RETURN
+    | SIZEOF
+}
+
+identifier = ${
+    !keyword~(ASCII_ALPHA | "_")~(ASCII_ALPHANUMERIC | "_")*
+}
+
+integer = ${
+    decimal_constant
+    | hex_constant
+    | octal_constant
+    | "'\\n'"
+    | "'"~ASCII~"'"
+}
+
+decimal_constant=${
+    ASCII_NONZERO_DIGIT~ASCII_DIGIT*
+}
+
+hex_constant=${
+    "0x"~ASCII_HEX_DIGIT+
+}
+
+octal_constant=${
+    "0"~ASCII_OCT_DIGIT*
+}
+
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT={
+    line_comment
+    | block_comment
+}
+
+line_comment=_{
+    "//"~(!NEWLINE~ANY)*~NEWLINE
+}
+
+block_comment=_{
+    "/*"~(!"*/"~ANY)*~"*/"
+}
