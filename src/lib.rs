@@ -1,3 +1,4 @@
+#![feature(assert_matches)]
 extern crate nom;
 extern crate logos;
 extern crate logos_nom_bridge;
