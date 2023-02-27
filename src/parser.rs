@@ -137,7 +137,7 @@ fn stmt(input: Input) -> IResult<Input, Stmt> {
         ),
         map(
             selection_stmt,
-            |(_, _, expr, _, e_if, e_else)| Stmt::SIf(expr, Box::new(e_if), e_else.map(|(_, stmt)| Box::new(stmt))),
+            |(_, _, expr, _, e_if, e_else)| Stmt::SIf(expr, Box::new(e_if), e_else.map_or(Box::new(Stmt::SSkip), |(_, stmt)| Box::new(stmt))),
         ),
         map(
             iteration_stmt,
@@ -146,7 +146,7 @@ fn stmt(input: Input) -> IResult<Input, Stmt> {
         map(
             jump_stmt,
             |(_, expr, _)| expr.map_or(Stmt::SSkip, |expr| Stmt::SReturn(expr)),
-        )
+        ),
     ))(input)
 }
 
@@ -466,19 +466,16 @@ pub mod tests {
 
 #[allow(dead_code)]
 pub mod structure {
+    use derive_new::new;
+    use derive_getters::Getters;
+
     pub type Ident<'a> = &'a str;
     pub type Const = i32;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(new, Debug, PartialEq, Getters)]
     pub struct File<'a> {
         funs: Vec<Fun<'a>>,
         structs: Vec<Struct<'a>>,
-    }
-
-    impl File<'_> {
-        pub fn new<'a>(funs: Vec<Fun<'a>>, structs: Vec<Struct<'a>>) -> File<'a> {
-            File { funs, structs }
-        }
     }
 
     #[derive(Debug, PartialEq)]
@@ -487,60 +484,36 @@ pub mod structure {
         TStruct(Ident<'a>),
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(new, Debug, PartialEq, Getters)]
     pub struct Formal<'a> {
         name: Ident<'a>,
         typ: Typ<'a>,
     }
 
-    impl Formal<'_> {
-        pub fn new<'a>(name: Ident<'a>, typ: Typ<'a>) -> Formal<'a> {
-            Formal { name, typ }
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
+    #[derive(new, Debug, PartialEq, Getters)]
     pub struct Struct<'a> {
         name: Ident<'a>,
         fields: Vec<Formal<'a>>,
     }
 
-    impl Struct<'_> {
-        pub fn new<'a>(name: Ident<'a>, fields: Vec<Formal<'a>>) -> Struct<'a> {
-            Struct { name, fields }
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
+    #[derive(new, Debug, PartialEq, Getters)]
     pub struct Fun<'a> {
         profile: Formal<'a>,
         args: Vec<Formal<'a>>,
         body: Block<'a>,
     }
 
-    impl Fun<'_> {
-        pub(crate) fn new<'a>(profile: Formal<'a>, args: Vec<Formal<'a>>, body: Block<'a>) -> Fun<'a> {
-            Fun { profile, args, body }
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
+    #[derive(new, Debug, PartialEq, Getters)]
     pub struct Block<'a> {
         vars: Vec<Formal<'a>>,
         stmts: Vec<Stmt<'a>>,
-    }
-
-    impl Block<'_> {
-        pub(crate) fn new<'a>(vars: Vec<Formal<'a>>, stmts: Vec<Stmt<'a>>) -> Block<'a> {
-            Block { vars, stmts }
-        }
     }
 
     #[derive(Debug, PartialEq)]
     pub enum Stmt<'a> {
         SSkip,
         SExpr(Expr<'a>),
-        SIf(Expr<'a>, Box<Stmt<'a>>, Option<Box<Stmt<'a>>>),
+        SIf(Expr<'a>, Box<Stmt<'a>>, Box<Stmt<'a>>),
         SWhile(Expr<'a>, Box<Stmt<'a>>),
         SBlock(Block<'a>),
         SReturn(Expr<'a>),
@@ -558,13 +531,13 @@ pub mod structure {
         ESizeof(Ident<'a>),
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub enum Unop {
         UNot,
         UMinus,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub enum Binop {
         BEq,
         BNeq,

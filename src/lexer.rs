@@ -1,5 +1,10 @@
 use std::str::FromStr;
 use logos::{Lexer, Logos};
+use parse_int::parse;
+
+fn parse_octal(lex: &mut Lexer<Token>) -> Option<i32> {
+    Some(parse::<i32>(lex.slice()).expect("Wrong octal value"))
+}
 
 fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i32> {
     let slice = lex.slice();
@@ -86,7 +91,7 @@ pub enum Token {
     DecimalConstant(i32),
     #[regex("0[xX][0-9a-fA-F]+", parse_hexadecimal)]
     HexConstant(i32),
-    #[regex("0[0-7]*", | lex | lex.slice().parse())]
+    #[regex("0[0-7]*", parse_octal)]
     OctalConstant(i32),
     #[regex("'.'", parse_char)]
     CharConstant(i32),
@@ -185,7 +190,7 @@ mod tests {
             Token::HexConstant(0),
             Token::DecimalConstant(56),
             Token::CharConstant(97),
-            Token::NewlineConstant
+            Token::NewlineConstant,
         ])
     }
 }
