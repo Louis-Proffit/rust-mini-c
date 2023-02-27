@@ -1,6 +1,7 @@
 #![feature(assert_matches)]
 
 use std::fs::{read_to_string};
+use std::rc::Rc;
 use logos_nom_bridge::Tokens;
 use rust_mini_c::interpreter::typer::interp_file;
 use rust_mini_c::parser::parse_file;
@@ -56,7 +57,7 @@ fn _test_exec_good(path: &str, expected_path: &str) {
     let (_, file) = parse_file(input).unwrap();
 
     let context = FileContext::default();
-    let file = typ_file(&context, &file).unwrap();
+    let file = typ_file(Rc::new(context), &file).unwrap();
 
     let interp = interp_file(file).unwrap();
     let output = interp.to_str();

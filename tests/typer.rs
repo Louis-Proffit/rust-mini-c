@@ -2,6 +2,7 @@
 
 use std::assert_matches::assert_matches;
 use std::fs::{read_to_string};
+use std::rc::Rc;
 use logos_nom_bridge::Tokens;
 use rust_mini_c::parser::parse_file;
 use rust_mini_c::typer::context::FileContext;
@@ -42,7 +43,7 @@ fn _test_typing_bad(path: &str) {
 
     let (_, file) = parsed.unwrap();
     let context = FileContext::default();
-    let typed = typ_file(&context, &file);
+    let typed = typ_file(Rc::new(context), &file);
 
     assert_matches!(typed, Err(_))
 }
@@ -58,7 +59,7 @@ fn _test_typing_good(path: &str) {
 
     let (_, file) = parsed.unwrap();
     let context = FileContext::default();
-    let typed = typ_file(&context, &file);
+    let typed = typ_file(Rc::new(context), &file);
 
     assert_matches!(typed, Ok(_))
 }

@@ -5,7 +5,7 @@ use itertools::{EitherOrBoth, Itertools};
 use structure::*;
 use crate::parser::structure as parser;
 use crate::typer::context::{BlockContext, FileContext, FunctionContext, ParentContext};
-use crate::typer::error::{DuplicateFieldName, IncompatibleTyp, TypError};
+use crate::typer::error::{DuplicateArgName, DuplicateFieldName, IncompatibleTyp, TypError};
 
 pub type TypResult<'a, T> = Result<T, TypError<'a>>;
 
@@ -104,8 +104,9 @@ fn typ_fun<'a>(context: Rc<FileContext<'a>>, fun: &'a parser::Fun<'a>) -> TypRes
     let mut args = HashMap::new();
 
     for arg in &args_vec {
-        args.insert(arg.name().clone(), arg.typ().clone());
-        // TODO check duplicate ?
+        if let Some(_) = args.insert(arg.name().clone(), arg.typ().clone()) {
+            return Err(TypError::DuplicateArgName(DuplicateArgName::new(arg.name())));
+        }
     }
 
     let fun_context = FunctionContext::new(
@@ -136,9 +137,8 @@ fn typ_block<'a, T>(context: Rc<T>, block: &'a parser::Block<'a>) -> TypResult<'
     let mut vars = HashMap::new();
 
     for var in block.vars() {
-        match vars.insert(var.name().clone(), typ_typ(context.context(), var.typ())?) {
-            None => todo!(),
-            Some(_) => todo!()
+        if let Some(_) = vars.insert(var.name().clone(), typ_typ(context.context(), var.typ())?) {
+            return Err(TypError::DuplicateVarName(var.name()));
         }
     }
 
@@ -207,11 +207,10 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
             )
         ),
         parser::Expr::EVar(var_name) => {
-            let typ = context.typ(var_name);
-            match typ {
+            match context.typ(var_name) {
                 None => Err(TypError::VariableDoesNotExist(var_name)),
                 Some(typ) => Ok(Expr::new(
-                    ExprNode::EAccessLocal(var_name),
+                    ExprNode::EAccessLocal(context.get_block_ident(var_name)),
                     typ.clone(),
                 ))
             }
@@ -249,7 +248,7 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
                     match context.typ(var_name) {
                         Some(typ_1) if typed_as(&typ_1, typ_2) => {
                             Ok(Expr::new(
-                                ExprNode::EAssignLocal(var_name, Box::new(expr_2)),
+                                ExprNode::EAssignLocal(context.get_block_ident(var_name), Box::new(expr_2)),
                                 typ_1,
                             ))
                         }
@@ -518,6 +517,7 @@ pub mod context {
         fn fresh_index(&self) -> u8;
         fn context(&self) -> Rc<FileContext<'a>>;
         fn profile(&self) -> Rc<Formal<'a>>;
+        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a>;
     }
 
     #[derive(Debug, Clone, Getters)]
@@ -530,13 +530,20 @@ pub mod context {
     }
 
     impl FunctionContext<'_> {
+        const ARGUMENT_BLOCK_INDEX: u8 = 0;
+
         pub fn new<'a>(
             context: Rc<FileContext<'a>>,
             profile: Rc<Formal<'a>>,
             arguments: HashMap<Ident<'a>, Typ<'a>>,
         ) -> FunctionContext<'a> {
             let locals = RefCell::new(HashMap::new());
-            let block_counter = RefCell::new(0);
+
+            for (name, typ) in &arguments {
+                locals.borrow_mut().insert((name.clone(), FunctionContext::ARGUMENT_BLOCK_INDEX), typ.clone());
+            }
+            let block_counter = RefCell::new(FunctionContext::ARGUMENT_BLOCK_INDEX + 1);
+
             let arguments = RefCell::new(arguments);
 
             FunctionContext {
@@ -572,6 +579,14 @@ pub mod context {
         fn profile(&self) -> Rc<Formal<'a>> {
             self.profile.clone()
         }
+
+        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
+            if !self.locals().borrow().contains_key(&(ident, 0)) {
+                panic!("L'argument {ident} n'existe pas : ???")
+            }
+            (ident, FunctionContext::ARGUMENT_BLOCK_INDEX)
+            // TODO check it exists
+        }
     }
 
     #[derive(Debug, Clone, Getters)]
@@ -582,11 +597,10 @@ pub mod context {
         vars: HashMap<Ident<'a>, Typ<'a>>,
     }
 
-
     impl BlockContext<'_> {
-        pub(crate) fn new<'a>(context: Rc<FileContext<'a>>,
-                              parent: Rc<dyn ParentContext<'a> + 'a>,
-                              vars: HashMap<Ident<'a>, Typ<'a>>) -> BlockContext<'a> {
+        pub fn new<'a>(context: Rc<FileContext<'a>>,
+                       parent: Rc<dyn ParentContext<'a> + 'a>,
+                       vars: HashMap<Ident<'a>, Typ<'a>>) -> BlockContext<'a> {
             let index = parent.fresh_index();
 
             for (name, typ) in &vars {
@@ -625,6 +639,14 @@ pub mod context {
         fn profile(&self) -> Rc<Formal<'a>> {
             self.parent.profile()
         }
+
+        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
+            if self.vars.contains_key(ident) {
+                (ident, self.index)
+            } else {
+                self.parent.get_block_ident(ident)
+            }
+        }
     }
 }
 
@@ -649,7 +671,6 @@ pub mod error {
 
     #[derive(new, Debug, Getters)]
     pub struct DuplicateArgName<'a> {
-        fun_name: Ident<'a>,
         arg_name: Ident<'a>,
     }
 
@@ -773,9 +794,9 @@ pub mod structure {
     #[derive(Debug)]
     pub enum ExprNode<'a> {
         EConst(Const),
-        EAccessLocal(Ident<'a>),
+        EAccessLocal(BlockIdent<'a>),
         EAccessField(Box<Expr<'a>>, Rc<Field<'a>>),
-        EAssignLocal(Ident<'a>, Box<Expr<'a>>),
+        EAssignLocal(BlockIdent<'a>, Box<Expr<'a>>),
         EAssignField(Box<Expr<'a>>, Rc<Field<'a>>, Box<Expr<'a>>),
         EUnop(Unop, Box<Expr<'a>>),
         EBinop(Binop, Box<Expr<'a>>, Box<Expr<'a>>),

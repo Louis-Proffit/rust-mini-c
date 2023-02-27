@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use std::iter::zip;
 use std::rc::Rc;
@@ -8,7 +7,7 @@ use derive_getters::Getters;
 use crate::interpreter::Stdout;
 use crate::interpreter::typer::defaults::{Malloc, Putchar};
 use crate::interpreter::typer::error::TypInterpreterError;
-use crate::typer::structure::{Binop, Block, Expr, ExprNode, File, Fun, Ident, Stmt, Unop};
+use crate::typer::structure::{Binop, Block, BlockIdent, Expr, ExprNode, File, Fun, Ident, Stmt, Unop};
 
 
 pub type InterpreterResult = Result<Stdout, TypInterpreterError>;
@@ -88,21 +87,8 @@ fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> Option<Value> 
 }
 
 fn interp_block<'a>(context: &mut Context<'a>, block: &Block<'a>) -> Option<Value> {
-    let mut vars = MemoryVar::new();
-
-    for (name, value) in context.vars.iter() {
-        vars.set(name.clone(), value.clone());
-    }
-
-    let mut new_context = Context::new(
-        vars,
-        context.memory.clone(),
-        context.functions.clone(),
-        context.stdout.clone(),
-    );
-
     for stmt in block.stmts() {
-        if let Some(x) = interp_stmt(&mut new_context, stmt) {
+        if let Some(x) = interp_stmt(context, stmt) {
             return Some(x);
         }
     }
@@ -114,7 +100,7 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> Value {
     match expr.node() {
         ExprNode::EConst(x) => *x as Value,
         ExprNode::EAccessLocal(x) => {
-            context.vars.get(x)
+            context.vars.get(x.clone())
         }
         ExprNode::EAccessField(expr, y) => {
             let address = interp_expr(context, expr);
@@ -127,7 +113,7 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> Value {
         }
         ExprNode::EAssignLocal(var, expr) => {
             let value = interp_expr(context, expr);
-            context.vars.set(var, value);
+            context.vars.set(var.clone(), value);
             value
         }
         ExprNode::EAssignField(expr, field, value) => {
@@ -168,7 +154,7 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> Value {
             let mut vars = MemoryVar::new();
 
             for (formal, arg) in zip(fun.args(), args) {
-                vars.set(formal.name().clone(), interp_expr(context, arg));
+                vars.set((formal.name(), 0), interp_expr(context, arg));
             }
 
             let mut new_context = Context::new(
@@ -194,7 +180,7 @@ const DEFAULT_VALUE: i64 = 0;
 
 #[derive(Debug)]
 struct MemoryVar<'a> {
-    vars: HashMap<Ident<'a>, Value>,
+    vars: HashMap<BlockIdent<'a>, Value>,
 }
 
 impl<'x> MemoryVar<'x> {
@@ -202,19 +188,15 @@ impl<'x> MemoryVar<'x> {
         MemoryVar { vars: HashMap::new() }
     }
 
-    fn iter(&self) -> Iter<Ident<'x>, Value> {
-        self.vars.iter()
-    }
-
-    fn get<'a: 'x>(&mut self, ident: Ident<'a>) -> Value {
-        if !self.vars.contains_key(ident) {
+    fn get<'a: 'x>(&mut self, ident: BlockIdent<'a>) -> Value {
+        if !self.vars.contains_key(&ident) {
             self.vars.insert(ident, DEFAULT_VALUE);
         }
 
-        *self.vars.get(ident).unwrap()
+        *self.vars.get(&ident).unwrap()
     }
 
-    fn set<'a: 'x>(&mut self, ident: Ident<'a>, value: Value) {
+    fn set<'a: 'x>(&mut self, ident: BlockIdent<'a>, value: Value) {
         self.vars.insert(ident, value);
     }
 }
@@ -289,7 +271,7 @@ pub mod defaults {
 
     impl<'a> InterpreterCallable<'a> for Putchar {
         fn call(&self, context: &mut Context<'a>) -> Option<Value> {
-            let value = context.vars.get("c");
+            let value = context.vars.get(("c", 0)); // TODO arg;
             context.stdout.borrow_mut().putchar(value as u8);
 
             Some(value)
