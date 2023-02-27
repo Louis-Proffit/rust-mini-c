@@ -1,5 +1,6 @@
 #![feature(assert_matches)]
 
+use std::assert_matches::assert_matches;
 use std::fs::{read_to_string};
 use std::rc::Rc;
 use logos_nom_bridge::Tokens;
@@ -7,18 +8,19 @@ use rust_mini_c::interpreter::typer::interp_file;
 use rust_mini_c::parser::parse_file;
 use rust_mini_c::typer::context::FileContext;
 use rust_mini_c::typer::typ_file;
-/*
-macro_rules! test_typing_bad {
+
+macro_rules! test_exec_bad {
     ($($name:ident: $path:literal,)*) => {
         $(
         #[test]
+        #[should_panic]
         fn $name() {
-            _test_typing_bad($path);
+            _test_exec_bad($path);
         }
         )*
 
     };
-}*/
+}
 
 macro_rules! test_exec_good {
     ($($name:ident: $path:literal->$expected_path:literal,)*) => {
@@ -32,22 +34,21 @@ macro_rules! test_exec_good {
     };
 }
 
-/*
+
 fn _test_exec_bad(path: &str) {
     println!("File {}", path);
 
     let content = read_to_string(path).unwrap();
     let input = Tokens::new(&content);
-    let parsed = parse_file(input);
+    let (_, file) = parse_file(input).unwrap();
 
-    assert_matches!(parsed, Ok(_));
+    let context = FileContext::default();
+    let file = typ_file(Rc::new(context), &file).unwrap();
 
-    let (_, file) = parsed.unwrap();
-    let context = Context::default();
-    let typed = typ_file(&context, &file);
+    let interp = interp_file(file);
 
-    assert_matches!(typed, Err(_))
-}*/
+    assert_matches!(interp, Err(_));
+}
 
 fn _test_exec_good(path: &str, expected_path: &str) {
     println!("File {}, expected output : {}", path, expected_path);
@@ -60,7 +61,7 @@ fn _test_exec_good(path: &str, expected_path: &str) {
     let file = typ_file(Rc::new(context), &file).unwrap();
 
     let interp = interp_file(file).unwrap();
-    let output = interp.to_str();
+    let output = interp.to_string();
 
     let expected = read_to_string(expected_path).unwrap();
 
@@ -135,43 +136,11 @@ mod good {
     );
 }
 
-/*
 mod bad {
-    use crate::_test_typing_bad;
+    use crate::_test_exec_bad;
 
-    test_typing_bad!(
-    arith_1: "tests/source/typing/bad/testfile-arith-1.c",
-    arith_2: "tests/source/typing/bad/testfile-arith-2.c",
-    arith_3: "tests/source/typing/bad/testfile-arith-3.c",
-    arrow_1: "tests/source/typing/bad/testfile-arrow-1.c",
-    arrow_2: "tests/source/typing/bad/testfile-arrow-2.c",
-    arrow_3: "tests/source/typing/bad/testfile-arrow-3.c",
-    arrow_4: "tests/source/typing/bad/testfile-arrow-4.c",
-    call_1: "tests/source/typing/bad/testfile-call-1.c",
-    call_2: "tests/source/typing/bad/testfile-call-2.c",
-    missing_main_1: "tests/source/typing/bad/testfile-missing_main-1.c",
-    missing_main_2: "tests/source/typing/bad/testfile-missing_main-2.c",
-    redef_1: "tests/source/typing/bad/testfile-redef-1.c",
-    redef_2: "tests/source/typing/bad/testfile-redef-2.c",
-    redef_3: "tests/source/typing/bad/testfile-redef-3.c",
-    redef_4: "tests/source/typing/bad/testfile-redef-4.c",
-    redef_5: "tests/source/typing/bad/testfile-redef-5.c",
-    redef_6: "tests/source/typing/bad/testfile-redef-6.c",
-    redef_7: "tests/source/typing/bad/testfile-redef-7.c",
-    redef_8: "tests/source/typing/bad/testfile-redef-8.c",
-    typing_scope_1: "tests/source/typing/bad/testfile-scope-1.c",
-    typing_scope_2: "tests/source/typing/bad/testfile-scope-2.c",
-    typing_scope_3: "tests/source/typing/bad/testfile-scope-3.c",
-    uminus_1: "tests/source/typing/bad/testfile-unary_minus-1.c",
-    undef_field_1: "tests/source/typing/bad/testfile-undef_field-1.c",
-    undef_fun_1: "tests/source/typing/bad/testfile-undef_fun-1.c",
-    undef_fun_2: "tests/source/typing/bad/testfile-undef_fun-2.c",
-    undef_struct_1: "tests/source/typing/bad/testfile-undef_struct-1.c",
-    undef_struct_2: "tests/source/typing/bad/testfile-undef_struct-2.c",
-    undef_struct_3: "tests/source/typing/bad/testfile-undef_struct-3.c",
-    undef_struct_4: "tests/source/typing/bad/testfile-undef_struct-4.c",
-    undef_var_1: "tests/source/typing/bad/testfile-undef_var-1.c",
-    undef_var_2: "tests/source/typing/bad/testfile-undef_var-2.c",
-    undef_var_3: "tests/source/typing/bad/testfile-undef_var-3.c",
-);
-}*/
+    test_exec_bad!(
+        deref_null: "tests/source/exec-fail/deref_null.c",
+        division_by_zero: "tests/source/exec-fail/division_by_zero1.c",
+    );
+}
