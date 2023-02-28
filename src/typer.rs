@@ -37,7 +37,7 @@ fn check_main(file: File) -> TypResult<File> {
         None => Err(TypError::MissingMainFunction),
         Some(fun) => {
             let signature = fun.signature();
-            if signature.profile().typ() != &Typ::TInt {
+            if signature.typ() != &Typ::TInt {
                 Err(TypError::WrongMainFunctionSignature)
             } else if !signature.args().is_empty() {
                 Err(TypError::WrongMainFunctionSignature)
@@ -89,44 +89,42 @@ fn typ_fun<'a>(context: Rc<FileContext<'a>>, fun: &'a parser::Fun<'a>) -> TypRes
     let fun_name = fun.profile().name();
     let fun_typ = typ_typ(context.clone(), fun.profile().typ())?;
 
+    let mut args = HashMap::new();
     let mut args_vec = vec![];
 
     for arg in fun.args() {
         let name = arg.name();
+        let block_name = BlockIdent::new(name.clone(), 0);
         let typ = typ_typ(context.clone(), arg.typ())?;
-        let formal = Formal::new(name, typ.clone());
+        let formal = Formal::new(block_name.clone(), typ.clone());
 
         args_vec.push(formal);
-    }
-
-    let profile = Rc::new(Formal::new(fun_name, fun_typ.clone()));
-
-    let mut args = HashMap::new();
-
-    for arg in &args_vec {
-        if let Some(_) = args.insert(arg.name().clone(), arg.typ().clone()) {
-            return Err(TypError::DuplicateArgName(DuplicateArgName::new(arg.name())));
+        if let Some(_) = args.insert(name.clone(), typ.clone()) {
+            return Err(TypError::DuplicateArgName(DuplicateArgName::new(block_name)));
         }
     }
 
-    let fun_context = FunctionContext::new(
+    let fun_context = Rc::new(FunctionContext::new(
         context.clone(),
-        profile.clone(),
+        fun_name.clone(),
+        fun_typ.clone(),
         args,
-    );
+    ));
 
-    let signature = Rc::new(Signature::new(profile.clone(), args_vec));
+    let signature = Rc::new(Signature::new(fun_name.clone(), fun_typ.clone(), args_vec));
 
-    if let Some(_) = context.funs().borrow_mut().insert(fun_name, signature.clone()) {
+    if let Some(_) = context.funs().borrow_mut().insert(fun_name.clone(), signature.clone()) {
         return Err(TypError::DuplicateFunName(fun_name));
     };
 
-    let block = typ_block(Rc::new(fun_context), fun.body())?;
+    let block = typ_block(fun_context.clone(), fun.body())?;
+
+    let locals = fun_context.locals().borrow().clone();
 
     Ok(
         Fun::new(
             signature,
-            // locals,
+            locals,
             block,
         )
     )
@@ -138,7 +136,7 @@ fn typ_block<'a, T>(context: Rc<T>, block: &'a parser::Block<'a>) -> TypResult<'
 
     for var in block.vars() {
         if let Some(_) = vars.insert(var.name().clone(), typ_typ(context.context(), var.typ())?) {
-            return Err(TypError::DuplicateVarName(var.name()));
+            return Err(TypError::DuplicateVarName(var.name().clone()));
         }
     }
 
@@ -182,13 +180,13 @@ fn typ_stmt<'a>(context: Rc<BlockContext<'a>>, stmt: &'a parser::Stmt<'a>) -> Ty
         }
         parser::Stmt::SReturn(expr) => {
             let expr = typ_expr(context.clone(), expr)?;
-            if typed_as(expr.typ(), context.profile().typ()) {
+            if typed_as(expr.typ(), &context.fun_typ()) {
                 Ok(Stmt::SReturn(expr))
             } else {
                 Err(
                     TypError::WrongExpressionTyp(
                         IncompatibleTyp::new(
-                            context.profile().typ().clone(),
+                            context.fun_typ(),
                             expr.typ().clone(),
                         )
                     )
@@ -208,7 +206,7 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
         ),
         parser::Expr::EVar(var_name) => {
             match context.typ(var_name) {
-                None => Err(TypError::VariableDoesNotExist(var_name)),
+                None => Err(TypError::VariableDoesNotExist),
                 Some(typ) => Ok(Expr::new(
                     ExprNode::EAccessLocal(context.get_block_ident(var_name)),
                     typ.clone(),
@@ -252,7 +250,7 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
                                 typ_1,
                             ))
                         }
-                        _ => Err(TypError::VariableDoesNotExist(var_name))
+                        _ => Err(TypError::VariableDoesNotExist)
                     }
                 }
                 parser::Expr::EArrow(expr, field_name) => {
@@ -387,7 +385,10 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
                                     EitherOrBoth::Both(arg_expr, arg_formal) => {
                                         let expr = typ_expr(context.clone(), arg_expr)?;
                                         if typed_as(arg_formal.typ(), expr.typ()) {
-                                            typed_args.push(expr);
+                                            typed_args.push(ArgExpr::new(
+                                                arg_formal.clone(),
+                                                expr,
+                                            ));
                                         } else {
                                             return Err(
                                                 TypError::WrongExpressionTyp(IncompatibleTyp::new(
@@ -402,16 +403,17 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
                                             TypError::TooManyArguments
                                         );
                                     }
-                                    EitherOrBoth::Right(arg) => {
+                                    EitherOrBoth::Right(_) => {
                                         return Err(
-                                            TypError::TooFewArguments(arg.name().clone())
+                                            // TODO args to error
+                                            TypError::TooFewArguments
                                         );
                                     }
                                 }
                             }
                             Ok(Expr::new(
                                 ExprNode::ECall(fun.clone(), typed_args),
-                                fun.profile().typ().clone(),
+                                fun.typ().clone(),
                             ))
                         }
                         None => {
@@ -437,7 +439,7 @@ fn typ_expr<'a>(context: Rc<BlockContext<'a>>, expr: &parser::Expr<'a>) -> TypRe
                 }
                 Some(structure) => Ok(
                     Expr::new(
-                        ExprNode::ESizeof(structure.clone()),
+                        ExprNode::EConst(structure.c_size()),
                         Typ::TInt,
                     )
                 )
@@ -473,13 +475,13 @@ fn typed_as<'a>(first: &Typ<'a>, second: &Typ<'a>) -> bool {
 
 pub mod context {
     use std::cell::RefCell;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::fmt::Debug;
     use std::ops::Deref;
     use std::rc::Rc;
     use derive_getters::Getters;
     use derive_new::new;
-    use crate::typer::structure::{BlockIdent, Formal, Ident, Signature, Struct, Typ};
+    use crate::typer::structure::{BlockIdent, Ident, Signature, Struct, Typ};
 
     #[derive(new, Debug, Getters, Clone)]
     pub struct FileContext<'a> {
@@ -495,12 +497,12 @@ pub mod context {
             let malloc = Signature::malloc();
 
             funs.insert(
-                putchar.profile().name().clone(),
+                putchar.name().clone(),
                 Rc::new(putchar),
             );
 
             funs.insert(
-                malloc.profile().name().clone(),
+                malloc.name().clone(),
                 Rc::new(malloc),
             );
 
@@ -512,21 +514,23 @@ pub mod context {
     }
 
     pub trait ParentContext<'a>: Debug {
-        fn declare(&self, ident: BlockIdent<'a>, typ: Typ<'a>);
+        fn declare(&self, ident: BlockIdent<'a>);
         fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>>;
         fn fresh_index(&self) -> u8;
         fn context(&self) -> Rc<FileContext<'a>>;
-        fn profile(&self) -> Rc<Formal<'a>>;
+        fn fun_typ(&self) -> Typ<'a>;
+        fn fun_name(&self) -> Ident<'a>;
         fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a>;
     }
 
     #[derive(Debug, Clone, Getters)]
     pub struct FunctionContext<'a> {
         context: Rc<FileContext<'a>>,
-        profile: Rc<Formal<'a>>,
+        name: Ident<'a>,
+        typ: Typ<'a>,
         block_counter: RefCell<u8>,
         arguments: RefCell<HashMap<Ident<'a>, Typ<'a>>>,
-        locals: RefCell<HashMap<BlockIdent<'a>, Typ<'a>>>,
+        locals: RefCell<HashSet<BlockIdent<'a>>>,
     }
 
     impl FunctionContext<'_> {
@@ -534,21 +538,27 @@ pub mod context {
 
         pub fn new<'a>(
             context: Rc<FileContext<'a>>,
-            profile: Rc<Formal<'a>>,
+            name: Ident<'a>,
+            typ: Typ<'a>,
             arguments: HashMap<Ident<'a>, Typ<'a>>,
         ) -> FunctionContext<'a> {
-            let locals = RefCell::new(HashMap::new());
+            let mut locals = HashSet::new();
 
-            for (name, typ) in &arguments {
-                locals.borrow_mut().insert((name.clone(), FunctionContext::ARGUMENT_BLOCK_INDEX), typ.clone());
+            for (name, _) in &arguments {
+                locals.insert(BlockIdent::new(
+                    name.clone(),
+                    FunctionContext::ARGUMENT_BLOCK_INDEX,
+                ));
             }
-            let block_counter = RefCell::new(FunctionContext::ARGUMENT_BLOCK_INDEX + 1);
 
+            let block_counter = RefCell::new(FunctionContext::ARGUMENT_BLOCK_INDEX + 1);
             let arguments = RefCell::new(arguments);
+            let locals = RefCell::new(locals);
 
             FunctionContext {
                 context,
-                profile,
+                name,
+                typ,
                 block_counter,
                 arguments,
                 locals,
@@ -557,8 +567,8 @@ pub mod context {
     }
 
     impl<'a> ParentContext<'a> for FunctionContext<'a> {
-        fn declare(&self, ident: BlockIdent<'a>, typ: Typ<'a>) {
-            self.locals.borrow_mut().insert(ident, typ);
+        fn declare(&self, ident: BlockIdent<'a>) {
+            self.locals.borrow_mut().insert(ident);
         }
 
         fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>> {
@@ -576,16 +586,20 @@ pub mod context {
             self.context.clone()
         }
 
-        fn profile(&self) -> Rc<Formal<'a>> {
-            self.profile.clone()
+        fn fun_typ(&self) -> Typ<'a> {
+            self.typ.clone()
+        }
+
+        fn fun_name(&self) -> Ident<'a> {
+            self.name.clone()
         }
 
         fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
-            if !self.locals().borrow().contains_key(&(ident, 0)) {
+            if self.arguments.borrow().contains_key(ident) {
+                BlockIdent::new(ident, 0)
+            } else {
                 panic!("L'argument {ident} n'existe pas : ???")
             }
-            (ident, FunctionContext::ARGUMENT_BLOCK_INDEX)
-            // TODO check it exists
         }
     }
 
@@ -603,8 +617,8 @@ pub mod context {
                        vars: HashMap<Ident<'a>, Typ<'a>>) -> BlockContext<'a> {
             let index = parent.fresh_index();
 
-            for (name, typ) in &vars {
-                parent.declare((name, index), typ.clone())
+            for (name, _) in &vars {
+                parent.declare(BlockIdent::new(name, index))
             }
 
             BlockContext {
@@ -617,8 +631,8 @@ pub mod context {
     }
 
     impl<'a> ParentContext<'a> for BlockContext<'a> {
-        fn declare(&self, ident: BlockIdent<'a>, typ: Typ<'a>) {
-            self.parent.declare(ident, typ)
+        fn declare(&self, ident: BlockIdent<'a>) {
+            self.parent.declare(ident)
         }
 
         fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>> {
@@ -636,13 +650,17 @@ pub mod context {
             self.context.clone()
         }
 
-        fn profile(&self) -> Rc<Formal<'a>> {
-            self.parent.profile()
+        fn fun_typ(&self) -> Typ<'a> {
+            self.parent.fun_typ()
+        }
+
+        fn fun_name(&self) -> Ident<'a> {
+            self.parent.fun_name()
         }
 
         fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
             if self.vars.contains_key(ident) {
-                (ident, self.index)
+                BlockIdent::new(ident, self.index)
             } else {
                 self.parent.get_block_ident(ident)
             }
@@ -655,7 +673,7 @@ pub mod error {
     use std::rc::Rc;
     use derive_new::new;
     use derive_getters::Getters;
-    use crate::typer::structure::{Ident, Struct, Typ};
+    use crate::typer::structure::{BlockIdent, Ident, Struct, Typ};
 
     #[derive(new, Debug)]
     pub struct DuplicateFieldName<'a> {
@@ -671,12 +689,13 @@ pub mod error {
 
     #[derive(new, Debug, Getters)]
     pub struct DuplicateArgName<'a> {
-        arg_name: Ident<'a>,
+        arg_name: BlockIdent<'a>,
     }
 
     #[derive(Debug)]
     pub enum TypError<'a> {
-        VariableDoesNotExist(Ident<'a>),
+        VariableDoesNotExist,
+        // TODO
         StructDoesNotExist(Ident<'a>),
         DuplicateVarName(Ident<'a>),
         DuplicateFunName(Ident<'a>),
@@ -689,7 +708,7 @@ pub mod error {
         MissingMainFunction,
         WrongMainFunctionSignature,
         TooManyArguments,
-        TooFewArguments(Ident<'a>),
+        TooFewArguments,
         CallingANonFunctionExpression,
         AssigningToNonAssignableExpression,
         WrongExpressionTyp(IncompatibleTyp<'a>),
@@ -700,17 +719,22 @@ pub mod error {
 #[allow(dead_code)]
 pub mod structure {
     use std::cell::RefCell;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::rc::Rc;
     use derive_new::new;
     use derive_getters::Getters;
 
     pub type Ident<'a> = crate::parser::structure::Ident<'a>;
-    pub type BlockIdent<'a> = (Ident<'a>, u8);
     pub type Const = crate::parser::structure::Const;
     pub type StructSize = usize;
     pub type Unop = crate::parser::structure::Unop;
     pub type Binop = crate::parser::structure::Binop;
+
+    #[derive(new, Debug, Getters, Clone, Eq, Hash, PartialEq)]
+    pub struct BlockIdent<'a> {
+        name: Ident<'a>,
+        block_index: u8,
+    }
 
     #[derive(new, Debug, Getters)]
     pub struct File<'a> {
@@ -725,20 +749,21 @@ pub mod structure {
 
     #[derive(new, Debug, Getters)]
     pub struct Signature<'a> {
-        profile: Rc<Formal<'a>>,
+        name: Ident<'a>,
+        typ: Typ<'a>,
         args: Vec<Formal<'a>>,
     }
 
     #[derive(new, Debug, Getters)]
     pub struct Fun<'a> {
         signature: Rc<Signature<'a>>,
-        // locals: Vec<BlockIdent<'a>>,
+        locals: HashSet<BlockIdent<'a>>,
         block: Block<'a>,
     }
 
-    #[derive(new, Debug, Getters)]
+    #[derive(new, Debug, Getters, Clone)]
     pub struct Formal<'a> {
-        name: Ident<'a>,
+        name: BlockIdent<'a>,
         typ: Typ<'a>,
     }
 
@@ -765,7 +790,7 @@ pub mod structure {
     impl Struct<'_> {
         const FIELD_SIZE: usize = 8;
 
-        pub fn c_size<'a>(&self) -> Const {
+        pub fn c_size(&self) -> Const {
             (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
         }
     }
@@ -791,6 +816,12 @@ pub mod structure {
         typ: Typ<'a>,
     }
 
+    #[derive(new, Getters, Debug)]
+    pub struct ArgExpr<'a> {
+        formal: Formal<'a>,
+        expr: Expr<'a>,
+    }
+
     #[derive(Debug)]
     pub enum ExprNode<'a> {
         EConst(Const),
@@ -800,8 +831,7 @@ pub mod structure {
         EAssignField(Box<Expr<'a>>, Rc<Field<'a>>, Box<Expr<'a>>),
         EUnop(Unop, Box<Expr<'a>>),
         EBinop(Binop, Box<Expr<'a>>, Box<Expr<'a>>),
-        ECall(Rc<Signature<'a>>, Vec<Expr<'a>>),
-        ESizeof(Rc<Struct<'a>>),
+        ECall(Rc<Signature<'a>>, Vec<ArgExpr<'a>>),
     }
 
     impl PartialEq<Self> for Struct<'_> {
@@ -816,15 +846,15 @@ pub mod structure {
         pub const MALLOC_NAME: &'static str = "malloc";
 
         pub fn main<'a>() -> Signature<'a> {
-            Signature::new(Rc::new(Formal::new(Signature::MAIN_NAME, Typ::TInt)), vec![])
+            Signature::new(Signature::MAIN_NAME, Typ::TInt, vec![])
         }
 
         pub fn putchar<'a>() -> Signature<'a> {
-            Signature::new(Rc::new(Formal::new(Signature::PUTCHAR_NAME, Typ::TInt)), vec![Formal::new("c", Typ::TInt)])
+            Signature::new(Signature::PUTCHAR_NAME, Typ::TInt, vec![Formal::new(BlockIdent::new("c", 0), Typ::TInt)])
         }
 
         pub fn malloc<'a>() -> Signature<'a> {
-            Signature::new(Rc::new(Formal::new(Signature::MALLOC_NAME, Typ::TVoidStar)), vec![Formal::new("n", Typ::TInt)])
+            Signature::new(Signature::MALLOC_NAME, Typ::TVoidStar, vec![Formal::new(BlockIdent::new("n", 0), Typ::TInt)])
         }
     }
 }

@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::iter::zip;
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
@@ -156,8 +155,8 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> InterpreterRes
         ExprNode::ECall(fun, args) => {
             let mut vars = MemoryVar::new();
 
-            for (formal, arg) in zip(fun.args(), args) {
-                vars.set((formal.name(), 0), interp_expr(context, arg)?);
+            for arg in args {
+                vars.set(arg.formal().name().clone(), interp_expr(context, arg.expr())?);
             }
 
             let mut new_context = Context::new(
@@ -168,12 +167,11 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> InterpreterRes
             );
 
             Ok(context.functions
-                .get(fun.profile().name())
+                .get(fun.name())
                 .expect("Function doesn't exist")
                 .call(&mut new_context)?
                 .unwrap_or(DEFAULT_RETURN_VALUE))
         }
-        ExprNode::ESizeof(x) => Ok(x.c_size() as Value)
     }
 }
 
@@ -193,7 +191,7 @@ impl<'x> MemoryVar<'x> {
 
     fn get<'a: 'x>(&mut self, ident: BlockIdent<'a>) -> Value {
         if !self.vars.contains_key(&ident) {
-            self.vars.insert(ident, DEFAULT_VALUE);
+            self.vars.insert(ident.clone(), DEFAULT_VALUE);
         }
 
         *self.vars.get(&ident).unwrap()
@@ -266,6 +264,7 @@ pub mod defaults {
     use std::cell::RefCell;
     use std::sync::Mutex;
     use derive_new::new;
+    use itertools::Itertools;
     use crate::interpreter::typer::{Context, InterpreterCallable, InterpreterResult, MemoryStruct, Value};
 
     static MEMORY_INDEX: Mutex<i64> = Mutex::new(1);
@@ -278,10 +277,14 @@ pub mod defaults {
 
     impl<'a> InterpreterCallable<'a> for Putchar {
         fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>> {
-            let value = context.vars.get(("c", 0)); // TODO arg;
-            context.stdout.borrow_mut().putchar(value as u8);
+            let (name, value) = context.vars.vars.iter().exactly_one().expect("Pas d'argument dans la fonction");
 
-            Ok(Some(value))
+            assert_eq!(name.name().clone(), "c");
+            assert_eq!(name.block_index().clone(), 0);
+
+            context.stdout.borrow_mut().putchar(*value as u8);
+
+            Ok(Some(*value))
         }
     }
 

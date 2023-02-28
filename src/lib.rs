@@ -7,3 +7,4 @@ pub mod parser;
 pub mod lexer;
 pub mod typer;
 pub mod interpreter;
+pub mod rtl;
