@@ -1,8 +1,9 @@
 use std::fmt::{Display, Formatter};
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum RtlError {
-    Any(&'static str)
+    Any(String)
 }
 
 impl Display for RtlError {

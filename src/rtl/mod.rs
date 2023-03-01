@@ -9,6 +9,7 @@ use crate::rtl::structure::graph::Graph;
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 use crate::typer::structure as typer;
+use crate::typer::structure::Binop;
 
 type RtlResult<T> = Result<T, RtlError>;
 
@@ -31,7 +32,12 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
     for local in fun.locals() {
         let register = Register::fresh();
 
-        vars.insert(local.clone().into(), register).expect("Duplicate block_index");
+        match vars.insert(local.clone().into(), register) {
+            None => {}
+            Some(_) => {
+                return Err(RtlError::Any(format!("Duplicate block name : {:?}", local)))
+            }
+        }
     }
 
     let graph = Graph::new(vars);
@@ -99,12 +105,7 @@ fn rtl_stmt(graph: &Graph, retr: &Register, retl: &Label, destl: &Label, stmt: &
             Ok(expr_label)
         }
         typer::Stmt::SBlock(block) => rtl_block(graph, retr, retl, destl, block),
-        typer::Stmt::SReturn(expr) => rtl_expr(
-            graph,
-            retr,
-            retl,
-            expr,
-        )
+        typer::Stmt::SReturn(expr) => rtl_expr(graph, retr, retl, expr)
     }
 }
 
@@ -122,23 +123,83 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
             )))
         }
         typer::ExprNode::EAccessField(_, _) => todo!(),
-        typer::ExprNode::EAssignLocal(_, _) => todo!(),
+        typer::ExprNode::EAssignLocal(var,expr) => {
+            let expr_reg = graph.vars().borrow().get(&var.clone().into()).expect("Register not found").clone();
+            let mov_lbl = graph.insert(Instr::EMBinop(Mbinop::MMov, expr_reg.clone(), destr.clone(), destl.clone()));
+            rtl_expr(graph, &expr_reg, &mov_lbl, expr)
+        },
         typer::ExprNode::EAssignField(_, _, _) => todo!(),
         typer::ExprNode::EUnop(unop, expr) => {
             match unop {
                 typer::Unop::UNot => {
                     let expr_reg = Register::fresh();
-                    let test_lbl = graph.insert(Instr::EMUnop(Munop::Msetei(0), expr_reg, destl.clone()));
+                    let test_lbl = graph.insert(Instr::EMUnop(Munop::Msetei(0), expr_reg.clone(), destl.clone()));
                     rtl_expr(graph, &expr_reg, &test_lbl, expr)
                 }
                 typer::Unop::UMinus => {
-                    let comp_label = graph.insert(Instr::EMUnop(Munop::Mneg, destr.clone(), destl.clone()));
-                    rtl_expr(graph, destr, &comp_label, expr)
+                    let expr_reg = Register::fresh();
+                    let sub_lbl = graph.insert(Instr::EMBinop(Mbinop::MSub, expr_reg.clone(), destr.clone(), destl.clone()));
+                    let zero_lbl = graph.insert(Instr::EConst(0, destr.clone(), sub_lbl));
+                    rtl_expr(graph, &expr_reg, &zero_lbl, expr)
                 }
             }
         }
-        typer::ExprNode::EBinop(_, _, _) => todo!(),
-        typer::ExprNode::ECall(_, _) => todo!()
+        typer::ExprNode::EBinop(op, expr_1, expr_2) => {
+            match op {
+                Binop::BAdd
+                | Binop::BSub
+                | Binop::BMul
+                | Binop::BDiv => {
+                    let rtl_op = match op {
+                        Binop::BAdd => Mbinop::MAdd,
+                        Binop::BSub => Mbinop::MSub,
+                        Binop::BMul => Mbinop::MMul,
+                        Binop::BDiv => Mbinop::MDiv,
+                        _ => unreachable!()
+                    };
+                    let reg_2 = Register::fresh();
+                    let operation_lbl = graph.insert(Instr::EMBinop(
+                        rtl_op,
+                        reg_2.clone(),
+                        destr.clone(),
+                        destl.clone(),
+                    ));
+                    let expr_2_lbl = rtl_expr(graph, &reg_2, &operation_lbl, expr_2)?;
+                    rtl_expr(graph, &destr, &expr_2_lbl, expr_1)
+                }
+                Binop::BEq => todo!(),
+                Binop::BNeq => todo!(),
+                Binop::BLt => todo!(),
+                Binop::BGt => todo!(),
+                Binop::BGe => todo!(),
+                Binop::BLe => todo!(),
+                Binop::BAnd => todo!(),
+                Binop::BOr => todo!()
+            }
+        }
+        typer::ExprNode::ECall(signature, args) => {
+            let eval_label = Label::fresh();
+
+            let mut arg_label = eval_label.clone();
+            let mut reverse_args = vec![];
+
+            for arg in args.iter().rev() {
+                let reg = Register::fresh();
+                reverse_args.push(reg.clone());
+                arg_label = rtl_expr(graph, &reg, &arg_label, arg.expr())?;
+            }
+
+            reverse_args.reverse();
+
+            graph.insert_with_label(eval_label.clone(), Instr::ECall(
+                destr.clone(),
+                String::from(signature.name().clone()),
+                reverse_args,
+                destl.clone(),
+            ));
+
+            Ok(arg_label)
+        }
     }
 }
 

@@ -1,11 +1,15 @@
+pub mod context;
+pub mod error;
+pub mod structure;
+
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use itertools::{EitherOrBoth, Itertools};
+use itertools::{EitherOrBoth, enumerate, Itertools};
 use structure::*;
 use crate::parser::structure as parser;
 use crate::typer::context::{BlockContext, FileContext, FunctionContext, ParentContext};
-use crate::typer::error::{DuplicateArgName, DuplicateFieldName, IncompatibleTyp, TypError};
+use crate::typer::error::{DuplicateFieldName, IncompatibleTyp, TypError};
 
 pub type TypResult<'a, T> = Result<T, TypError<'a>>;
 
@@ -89,26 +93,29 @@ fn typ_fun<'a>(context: Rc<FileContext<'a>>, fun: &'a parser::Fun<'a>) -> TypRes
     let fun_name = fun.profile().name();
     let fun_typ = typ_typ(context.clone(), fun.profile().typ())?;
 
-    let mut args = HashMap::new();
+    let mut arg_names = HashSet::new();
     let mut args_vec = vec![];
 
-    for arg in fun.args() {
+    for (index, arg) in enumerate(fun.args()) {
         let name = arg.name();
-        let block_name = BlockIdent::new(name.clone(), 0);
+
+        if !arg_names.insert(name.clone()) {
+            return Err(TypError::DuplicateArgName(name.clone()));
+        }
+
+        let block_name = BlockIdent::Arg(index, name.clone());
         let typ = typ_typ(context.clone(), arg.typ())?;
         let formal = Formal::new(block_name.clone(), typ.clone());
 
+        // TODO check arg names
         args_vec.push(formal);
-        if let Some(_) = args.insert(name.clone(), typ.clone()) {
-            return Err(TypError::DuplicateArgName(DuplicateArgName::new(block_name)));
-        }
     }
 
     let fun_context = Rc::new(FunctionContext::new(
         context.clone(),
         fun_name.clone(),
         fun_typ.clone(),
-        args,
+        args_vec.clone(),
     ));
 
     let signature = Rc::new(Signature::new(fun_name.clone(), fun_typ.clone(), args_vec));
@@ -470,391 +477,5 @@ fn typed_as<'a>(first: &Typ<'a>, second: &Typ<'a>) -> bool {
         (Typ::TVoidStar, Typ::TStruct(_)) => true,
         (Typ::TStruct(_), Typ::TVoidStar) => true,
         (_, _) => false
-    }
-}
-
-pub mod context {
-    use std::cell::RefCell;
-    use std::collections::{HashMap, HashSet};
-    use std::fmt::Debug;
-    use std::ops::Deref;
-    use std::rc::Rc;
-    use derive_getters::Getters;
-    use derive_new::new;
-    use crate::typer::structure::{BlockIdent, Ident, Signature, Struct, Typ};
-
-    #[derive(new, Debug, Getters, Clone)]
-    pub struct FileContext<'a> {
-        structs: Rc<RefCell<HashMap<Ident<'a>, Rc<Struct<'a>>>>>,
-        funs: Rc<RefCell<HashMap<Ident<'a>, Rc<Signature<'a>>>>>,
-    }
-
-    impl FileContext<'_> {
-        pub fn default<'a>() -> FileContext<'a> {
-            let mut funs = HashMap::new();
-
-            let putchar = Signature::putchar();
-            let malloc = Signature::malloc();
-
-            funs.insert(
-                putchar.name().clone(),
-                Rc::new(putchar),
-            );
-
-            funs.insert(
-                malloc.name().clone(),
-                Rc::new(malloc),
-            );
-
-            let structs = Rc::new(RefCell::new(HashMap::new()));
-            let funs = Rc::new(RefCell::new(funs));
-
-            FileContext::new(structs, funs)
-        }
-    }
-
-    pub trait ParentContext<'a>: Debug {
-        fn declare(&self, ident: BlockIdent<'a>);
-        fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>>;
-        fn fresh_index(&self) -> u8;
-        fn context(&self) -> Rc<FileContext<'a>>;
-        fn fun_typ(&self) -> Typ<'a>;
-        fn fun_name(&self) -> Ident<'a>;
-        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a>;
-    }
-
-    #[derive(Debug, Clone, Getters)]
-    pub struct FunctionContext<'a> {
-        context: Rc<FileContext<'a>>,
-        name: Ident<'a>,
-        typ: Typ<'a>,
-        block_counter: RefCell<u8>,
-        arguments: RefCell<HashMap<Ident<'a>, Typ<'a>>>,
-        locals: RefCell<HashSet<BlockIdent<'a>>>,
-    }
-
-    impl FunctionContext<'_> {
-        const ARGUMENT_BLOCK_INDEX: u8 = 0;
-
-        pub fn new<'a>(
-            context: Rc<FileContext<'a>>,
-            name: Ident<'a>,
-            typ: Typ<'a>,
-            arguments: HashMap<Ident<'a>, Typ<'a>>,
-        ) -> FunctionContext<'a> {
-            let mut locals = HashSet::new();
-
-            for (name, _) in &arguments {
-                locals.insert(BlockIdent::new(
-                    name.clone(),
-                    FunctionContext::ARGUMENT_BLOCK_INDEX,
-                ));
-            }
-
-            let block_counter = RefCell::new(FunctionContext::ARGUMENT_BLOCK_INDEX + 1);
-            let arguments = RefCell::new(arguments);
-            let locals = RefCell::new(locals);
-
-            FunctionContext {
-                context,
-                name,
-                typ,
-                block_counter,
-                arguments,
-                locals,
-            }
-        }
-    }
-
-    impl<'a> ParentContext<'a> for FunctionContext<'a> {
-        fn declare(&self, ident: BlockIdent<'a>) {
-            self.locals.borrow_mut().insert(ident);
-        }
-
-        fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>> {
-            self.arguments.borrow().get(ident).cloned()
-        }
-
-        fn fresh_index(&self) -> u8 {
-            let mut fresh = self.block_counter.borrow_mut();
-            let returned = *fresh.deref();
-            *fresh += 1;
-            returned
-        }
-
-        fn context(&self) -> Rc<FileContext<'a>> {
-            self.context.clone()
-        }
-
-        fn fun_typ(&self) -> Typ<'a> {
-            self.typ.clone()
-        }
-
-        fn fun_name(&self) -> Ident<'a> {
-            self.name.clone()
-        }
-
-        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
-            if self.arguments.borrow().contains_key(ident) {
-                BlockIdent::new(ident, 0)
-            } else {
-                panic!("L'argument {ident} n'existe pas : ???")
-            }
-        }
-    }
-
-    #[derive(Debug, Clone, Getters)]
-    pub struct BlockContext<'a> {
-        context: Rc<FileContext<'a>>,
-        index: u8,
-        parent: Rc<dyn ParentContext<'a> + 'a>,
-        vars: HashMap<Ident<'a>, Typ<'a>>,
-    }
-
-    impl BlockContext<'_> {
-        pub fn new<'a>(context: Rc<FileContext<'a>>,
-                       parent: Rc<dyn ParentContext<'a> + 'a>,
-                       vars: HashMap<Ident<'a>, Typ<'a>>) -> BlockContext<'a> {
-            let index = parent.fresh_index();
-
-            for (name, _) in &vars {
-                parent.declare(BlockIdent::new(name, index))
-            }
-
-            BlockContext {
-                context,
-                parent,
-                vars,
-                index,
-            }
-        }
-    }
-
-    impl<'a> ParentContext<'a> for BlockContext<'a> {
-        fn declare(&self, ident: BlockIdent<'a>) {
-            self.parent.declare(ident)
-        }
-
-        fn typ(&self, ident: Ident<'a>) -> Option<Typ<'a>> {
-            match self.vars.get(ident) {
-                None => self.parent.typ(ident),
-                Some(x) => Some(x.clone())
-            }
-        }
-
-        fn fresh_index(&self) -> u8 {
-            self.parent.fresh_index()
-        }
-
-        fn context(&self) -> Rc<FileContext<'a>> {
-            self.context.clone()
-        }
-
-        fn fun_typ(&self) -> Typ<'a> {
-            self.parent.fun_typ()
-        }
-
-        fn fun_name(&self) -> Ident<'a> {
-            self.parent.fun_name()
-        }
-
-        fn get_block_ident(&self, ident: Ident<'a>) -> BlockIdent<'a> {
-            if self.vars.contains_key(ident) {
-                BlockIdent::new(ident, self.index)
-            } else {
-                self.parent.get_block_ident(ident)
-            }
-        }
-    }
-}
-
-#[allow(dead_code)]
-pub mod error {
-    use std::rc::Rc;
-    use derive_new::new;
-    use derive_getters::Getters;
-    use crate::typer::structure::{BlockIdent, Ident, Struct, Typ};
-
-    #[derive(new, Debug)]
-    pub struct DuplicateFieldName<'a> {
-        struct_name: Ident<'a>,
-        field_name: Ident<'a>,
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct IncompatibleTyp<'a> {
-        expected: Typ<'a>,
-        actual: Typ<'a>,
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct DuplicateArgName<'a> {
-        arg_name: BlockIdent<'a>,
-    }
-
-    #[derive(Debug)]
-    pub enum TypError<'a> {
-        VariableDoesNotExist,
-        // TODO
-        StructDoesNotExist(Ident<'a>),
-        DuplicateVarName(Ident<'a>),
-        DuplicateFunName(Ident<'a>),
-        DuplicateStructName(Ident<'a>),
-        DereferenceNonStructPointer(Ident<'a>),
-        FieldDoesntExist(Rc<Struct<'a>>, Ident<'a>),
-        AccessingFieldOnNonStructTyp(Typ<'a>, Ident<'a>),
-        DuplicateFieldName(DuplicateFieldName<'a>),
-        FunctionDoesntExist(Ident<'a>),
-        MissingMainFunction,
-        WrongMainFunctionSignature,
-        TooManyArguments,
-        TooFewArguments,
-        CallingANonFunctionExpression,
-        AssigningToNonAssignableExpression,
-        WrongExpressionTyp(IncompatibleTyp<'a>),
-        DuplicateArgName(DuplicateArgName<'a>),
-    }
-}
-
-#[allow(dead_code)]
-pub mod structure {
-    use std::cell::RefCell;
-    use std::collections::{HashMap, HashSet};
-    use std::rc::Rc;
-    use derive_new::new;
-    use derive_getters::Getters;
-
-    pub type Ident<'a> = crate::parser::structure::Ident<'a>;
-    pub type Const = crate::parser::structure::Const;
-    pub type StructSize = usize;
-    pub type Unop = crate::parser::structure::Unop;
-    pub type Binop = crate::parser::structure::Binop;
-
-    #[derive(new, Debug, Getters, Clone, Eq, Hash, PartialEq)]
-    pub struct BlockIdent<'a> {
-        name: Ident<'a>,
-        block_index: u8,
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct File<'a> {
-        funs: HashMap<Ident<'a>, Fun<'a>>,
-    }
-
-    impl<'a> File<'a> {
-        pub fn into_funs(self) -> HashMap<Ident<'a>, Fun<'a>> {
-            self.funs
-        }
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Signature<'a> {
-        name: Ident<'a>,
-        typ: Typ<'a>,
-        args: Vec<Formal<'a>>,
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Fun<'a> {
-        signature: Rc<Signature<'a>>,
-        locals: HashSet<BlockIdent<'a>>,
-        block: Block<'a>,
-    }
-
-    #[derive(new, Debug, Getters, Clone)]
-    pub struct Formal<'a> {
-        name: BlockIdent<'a>,
-        typ: Typ<'a>,
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Field<'a> {
-        name: Ident<'a>,
-        typ: Typ<'a>,
-    }
-
-    #[derive(Clone, Debug, PartialEq)]
-    pub enum Typ<'a> {
-        TInt,
-        TVoidStar,
-        TTypeNull,
-        TStruct(Rc<Struct<'a>>),
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Struct<'a> {
-        name: Ident<'a>,
-        fields: Rc<RefCell<HashMap<Ident<'a>, Rc<Field<'a>>>>>, // TODO remove refcell
-    }
-
-    impl Struct<'_> {
-        const FIELD_SIZE: usize = 8;
-
-        pub fn c_size(&self) -> Const {
-            (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
-        }
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Block<'a> {
-        stmts: Vec<Stmt<'a>>,
-    }
-
-    #[derive(Debug)]
-    pub enum Stmt<'a> {
-        SSkip,
-        SExpr(Expr<'a>),
-        SIf(Expr<'a>, Box<Stmt<'a>>, Box<Stmt<'a>>),
-        SWhile(Expr<'a>, Box<Stmt<'a>>),
-        SBlock(Block<'a>),
-        SReturn(Expr<'a>),
-    }
-
-    #[derive(new, Debug, Getters)]
-    pub struct Expr<'a> {
-        node: ExprNode<'a>,
-        typ: Typ<'a>,
-    }
-
-    #[derive(new, Getters, Debug)]
-    pub struct ArgExpr<'a> {
-        formal: Formal<'a>,
-        expr: Expr<'a>,
-    }
-
-    #[derive(Debug)]
-    pub enum ExprNode<'a> {
-        EConst(Const),
-        EAccessLocal(BlockIdent<'a>),
-        EAccessField(Box<Expr<'a>>, Rc<Field<'a>>),
-        EAssignLocal(BlockIdent<'a>, Box<Expr<'a>>),
-        EAssignField(Box<Expr<'a>>, Rc<Field<'a>>, Box<Expr<'a>>),
-        EUnop(Unop, Box<Expr<'a>>),
-        EBinop(Binop, Box<Expr<'a>>, Box<Expr<'a>>),
-        ECall(Rc<Signature<'a>>, Vec<ArgExpr<'a>>),
-    }
-
-    impl PartialEq<Self> for Struct<'_> {
-        fn eq(&self, other: &Self) -> bool {
-            self.name == other.name
-        }
-    }
-
-    impl Signature<'_> {
-        pub const MAIN_NAME: &'static str = "main";
-        pub const PUTCHAR_NAME: &'static str = "putchar";
-        pub const MALLOC_NAME: &'static str = "malloc";
-
-        pub fn main<'a>() -> Signature<'a> {
-            Signature::new(Signature::MAIN_NAME, Typ::TInt, vec![])
-        }
-
-        pub fn putchar<'a>() -> Signature<'a> {
-            Signature::new(Signature::PUTCHAR_NAME, Typ::TInt, vec![Formal::new(BlockIdent::new("c", 0), Typ::TInt)])
-        }
-
-        pub fn malloc<'a>() -> Signature<'a> {
-            Signature::new(Signature::MALLOC_NAME, Typ::TVoidStar, vec![Formal::new(BlockIdent::new("n", 0), Typ::TInt)])
-        }
     }
 }

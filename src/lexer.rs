@@ -104,7 +104,7 @@ pub enum Token {
     LineComment,
 
     #[error]
-    #[regex(r"[ \t\n\f]+", logos::skip)]
+    #[regex(r"[ \r\t\n\f]+", logos::skip)]
     // Logos requires one token variant to handle errors,
     // it can be named anything you wish.
     Error,

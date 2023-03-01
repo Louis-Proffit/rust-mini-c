@@ -28,6 +28,37 @@ impl Graph {
         }
     }
 
+    pub fn locals(&self) -> Vec<(String, Register)> {
+        let mut locals = vec![];
+        for (ident, reg) in self.vars.borrow().iter() {
+            match ident {
+                BlockIdent::Arg(_, _) => {}
+                BlockIdent::Local(block_index, ident) => {
+                    let name = String::from(ident);
+                    locals.push((format!("{}_{}", name, block_index), reg.clone()))
+                }
+            }
+        }
+
+        locals
+    }
+
+    pub fn arguments(&self) -> Vec<(String, Register)> {
+        let mut args = vec![];
+        // TODO sort by index ?
+        for (ident, reg) in self.vars.borrow().iter() {
+            match ident {
+                BlockIdent::Arg(_, ident) => {
+                    let name = String::from(ident);
+                    args.push((name, reg.clone()))
+                }
+                BlockIdent::Local(_, _) => {}
+            }
+        }
+
+        args
+    }
+
     pub fn insert_with_label(&self, label: Label, instr: Instr) {
         self.instrs.borrow_mut().insert(label.clone(), instr);
     }

@@ -264,8 +264,9 @@ pub mod defaults {
     use std::cell::RefCell;
     use std::sync::Mutex;
     use derive_new::new;
-    use itertools::Itertools;
     use crate::interpreter::typer::{Context, InterpreterCallable, InterpreterResult, MemoryStruct, Value};
+    use crate::interpreter::typer::error::TypInterpreterError;
+    use crate::typer::structure::BlockIdent;
 
     static MEMORY_INDEX: Mutex<i64> = Mutex::new(1);
 
@@ -277,14 +278,16 @@ pub mod defaults {
 
     impl<'a> InterpreterCallable<'a> for Putchar {
         fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>> {
-            let (name, value) = context.vars.vars.iter().exactly_one().expect("Pas d'argument dans la fonction");
-
-            assert_eq!(name.name().clone(), "c");
-            assert_eq!(name.block_index().clone(), 0);
-
-            context.stdout.borrow_mut().putchar(*value as u8);
-
-            Ok(Some(*value))
+            for (ident, value) in &context.vars.vars {
+                match ident {
+                    BlockIdent::Arg(0, "c") => {
+                        context.stdout.borrow_mut().putchar(*value as u8);
+                        return Ok(Some(*value))
+                    }
+                    _ => {}
+                }
+            }
+            Err(TypInterpreterError::new())
         }
     }
 
@@ -302,7 +305,10 @@ pub mod defaults {
     }
 }
 
+
 pub mod error {
-    #[derive(Debug)]
+    use derive_new::new;
+
+    #[derive(Debug, new)]
     pub struct TypInterpreterError {}
 }
