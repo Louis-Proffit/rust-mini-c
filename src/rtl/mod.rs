@@ -4,7 +4,7 @@ pub mod structure;
 
 use std::collections::HashMap;
 use crate::rtl::error::RtlError;
-use crate::rtl::structure::{File, Fresh, Fun, Instr, Mbinop, MuBranch};
+use crate::rtl::structure::{File, Fresh, Fun, Instr, Mbinop, MuBranch, Munop};
 use crate::rtl::structure::graph::Graph;
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
@@ -124,11 +124,17 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
         typer::ExprNode::EAccessField(_, _) => todo!(),
         typer::ExprNode::EAssignLocal(_, _) => todo!(),
         typer::ExprNode::EAssignField(_, _, _) => todo!(),
-        typer::ExprNode::EUnop(unop, _expr) => {
-            // let reg = Register::fresh();
+        typer::ExprNode::EUnop(unop, expr) => {
             match unop {
-                typer::Unop::UNot => todo!(),
-                typer::Unop::UMinus => todo!()
+                typer::Unop::UNot => {
+                    let expr_reg = Register::fresh();
+                    let test_lbl = graph.insert(Instr::EMUnop(Munop::Msetei(0), expr_reg, destl.clone()));
+                    rtl_expr(graph, &expr_reg, &test_lbl, expr)
+                }
+                typer::Unop::UMinus => {
+                    let comp_label = graph.insert(Instr::EMUnop(Munop::Mneg, destr.clone(), destl.clone()));
+                    rtl_expr(graph, destr, &comp_label, expr)
+                }
             }
         }
         typer::ExprNode::EBinop(_, _, _) => todo!(),
