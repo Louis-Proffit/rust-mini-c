@@ -1,1 +1,7 @@
-int main() {int x, y; y = 40; x = 2; return y + x; }
+int fact(int n) {
+  if (n <= 1) return 1;
+  return n * fact(n-1);
+}
+int main() {
+  return fact(42);
+}

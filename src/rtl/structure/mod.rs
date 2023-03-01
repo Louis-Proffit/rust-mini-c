@@ -5,7 +5,7 @@ pub mod register;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
 use derive_getters::Getters;
-use crate::rtl::structure::graph::{Graph, PrintableGraph};
+use crate::rtl::structure::graph::{Graph, DisplayableGraph, DisplayableVar};
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 
@@ -86,6 +86,9 @@ pub enum MbBranch {
     MJle,
 }
 
+struct Registers<'a>(&'a Vec<Register>);
+struct DisplayableVars(Vec<DisplayableVar>);
+
 impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent {
     fn from(value: crate::typer::structure::BlockIdent<'a>) -> Self {
         match value {
@@ -99,7 +102,7 @@ impl Display for File {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== RTL ==================================================")?;
         for fun in &self.funs {
-            writeln!(f, "{fun}\n")?;
+            writeln!(f, "{fun}")?;
         }
         Ok(())
     }
@@ -107,17 +110,17 @@ impl Display for File {
 
 impl Display for Fun {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{} {}({:?})", self.result, self.name, self.graph.arguments())?;
+        writeln!(f, "{} {}({})", self.result, self.name, DisplayableVars(self.graph.arguments()))?;
         writeln!(f, "\tentry : {}", self.entry)?;
         writeln!(f, "\texit : {}", self.exit)?;
-        writeln!(f, "\tlocals: {:?}", self.graph.locals())?;
+        writeln!(f, "\tlocals: {}", DisplayableVars(self.graph.locals()))?;
 
-        let printable_graph = PrintableGraph::new(
+        let printable_graph = DisplayableGraph::new(
             &self.graph,
             &self.entry,
             &self.exit,
         );
-        writeln!(f, "{}", printable_graph)?;
+        write!(f, "{}", printable_graph)?;
         Ok(())
     }
 }
@@ -132,7 +135,7 @@ impl Display for Instr {
             Instr::EMBinop(op, r1, r2, l) => write!(f, "{} {} {} --> {}", op, r1, r2, l),
             Instr::EMuBranch(op, reg, lbl1, lbl2) => write!(f, "{} {} --> {},{}", op, reg, lbl1, lbl2),
             Instr::EMbBranch(_, _, _, _, _) => write!(f, "bbranch TODO"),
-            Instr::ECall(reg, name, args, l) => write!(f, "call {} {}({:?}) --> {}", reg, name, args, l),
+            Instr::ECall(reg, name, args, l) => write!(f, "call {} {}({}) --> {}", reg, name, Registers(args), l),
             Instr::EGoto(l) => write!(f, "goto {}", l),
         }
     }
@@ -174,5 +177,24 @@ impl Display for MuBranch {
             MuBranch::MJlei(c) => write!(f, "jle {}", c),
             MuBranch::MJgi(c) => write!(f, "jg {}", c),
         }
+    }
+}
+
+impl Display for Registers<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for reg in self.0 {
+            write!(f, "{}", reg)?;
+        }
+        Ok(())
+    }
+}
+
+
+impl Display for DisplayableVars {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for var in &self.0 {
+            write!(f, "{},", var)?;
+        }
+        Ok(())
     }
 }

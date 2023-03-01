@@ -14,10 +14,16 @@ pub struct Graph {
 }
 
 #[derive(new)]
-pub struct PrintableGraph<'a> {
+pub struct DisplayableGraph<'a> {
     graph: &'a Graph,
     entry: &'a Label,
     exit: &'a Label,
+}
+
+#[derive(new)]
+pub struct DisplayableVar {
+    name: String,
+    register: Register,
 }
 
 impl Graph {
@@ -28,14 +34,14 @@ impl Graph {
         }
     }
 
-    pub fn locals(&self) -> Vec<(String, Register)> {
+    pub fn locals(&self) -> Vec<DisplayableVar> {
         let mut locals = vec![];
         for (ident, reg) in self.vars.borrow().iter() {
             match ident {
                 BlockIdent::Arg(_, _) => {}
                 BlockIdent::Local(block_index, ident) => {
                     let name = String::from(ident);
-                    locals.push((format!("{}_{}", name, block_index), reg.clone()))
+                    locals.push(DisplayableVar::new(format!("{}_{}", name, block_index), reg.clone()))
                 }
             }
         }
@@ -43,14 +49,14 @@ impl Graph {
         locals
     }
 
-    pub fn arguments(&self) -> Vec<(String, Register)> {
+    pub fn arguments(&self) -> Vec<DisplayableVar> {
         let mut args = vec![];
         // TODO sort by index ?
         for (ident, reg) in self.vars.borrow().iter() {
             match ident {
                 BlockIdent::Arg(_, ident) => {
                     let name = String::from(ident);
-                    args.push((name, reg.clone()))
+                    args.push(DisplayableVar::new(name, reg.clone()))
                 }
                 BlockIdent::Local(_, _) => {}
             }
@@ -70,7 +76,7 @@ impl Graph {
     }
 }
 
-impl PrintableGraph<'_> {
+impl DisplayableGraph<'_> {
     fn visit(&self, visited: &mut HashSet<Label>, label: &Label, f: &mut Formatter<'_>) -> std::fmt::Result {
         if !visited.contains(label) && label != self.exit {
             let instr = self.graph.instrs.borrow().get(label).unwrap().clone();
@@ -96,10 +102,17 @@ impl PrintableGraph<'_> {
     }
 }
 
-impl Display for PrintableGraph<'_> {
+impl Display for DisplayableGraph<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut visited = HashSet::new();
 
         self.visit(&mut visited, &self.entry, f)
+    }
+}
+
+
+impl Display for DisplayableVar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.name, self.register)
     }
 }

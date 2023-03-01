@@ -35,7 +35,7 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
         match vars.insert(local.clone().into(), register) {
             None => {}
             Some(_) => {
-                return Err(RtlError::Any(format!("Duplicate block name : {:?}", local)))
+                return Err(RtlError::Any(format!("Duplicate block name : {:?}", local)));
             }
         }
     }
@@ -123,11 +123,11 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
             )))
         }
         typer::ExprNode::EAccessField(_, _) => todo!(),
-        typer::ExprNode::EAssignLocal(var,expr) => {
+        typer::ExprNode::EAssignLocal(var, expr) => {
             let expr_reg = graph.vars().borrow().get(&var.clone().into()).expect("Register not found").clone();
             let mov_lbl = graph.insert(Instr::EMBinop(Mbinop::MMov, expr_reg.clone(), destr.clone(), destl.clone()));
             rtl_expr(graph, &expr_reg, &mov_lbl, expr)
-        },
+        }
         typer::ExprNode::EAssignField(_, _, _) => todo!(),
         typer::ExprNode::EUnop(unop, expr) => {
             match unop {
@@ -149,12 +149,24 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
                 Binop::BAdd
                 | Binop::BSub
                 | Binop::BMul
-                | Binop::BDiv => {
+                | Binop::BDiv
+                | Binop::BEq
+                | Binop::BNeq
+                | Binop::BLt
+                | Binop::BGt
+                | Binop::BGe
+                | Binop::BLe => {
                     let rtl_op = match op {
                         Binop::BAdd => Mbinop::MAdd,
                         Binop::BSub => Mbinop::MSub,
                         Binop::BMul => Mbinop::MMul,
                         Binop::BDiv => Mbinop::MDiv,
+                        Binop::BEq => Mbinop::MSete,
+                        Binop::BNeq => Mbinop::MSetne,
+                        Binop::BLt => Mbinop::Msetl,
+                        Binop::BGt => Mbinop::Msetg,
+                        Binop::BGe => Mbinop::Msetge,
+                        Binop::BLe => Mbinop::Msetle,
                         _ => unreachable!()
                     };
                     let reg_2 = Register::fresh();
@@ -167,12 +179,6 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
                     let expr_2_lbl = rtl_expr(graph, &reg_2, &operation_lbl, expr_2)?;
                     rtl_expr(graph, &destr, &expr_2_lbl, expr_1)
                 }
-                Binop::BEq => todo!(),
-                Binop::BNeq => todo!(),
-                Binop::BLt => todo!(),
-                Binop::BGt => todo!(),
-                Binop::BGe => todo!(),
-                Binop::BLe => todo!(),
                 Binop::BAnd => todo!(),
                 Binop::BOr => todo!()
             }
