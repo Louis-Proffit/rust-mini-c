@@ -42,8 +42,8 @@ pub struct File {
 #[derive(Debug, Clone)]
 pub enum Instr {
     EConst(Const, Register, Label),
-    ELoad(Register, u8, Register, Label),
-    EStore(Register, Register, u8, Label),
+    ELoad(Register, usize, Register, Label),
+    EStore(Register, Register, usize, Label),
     EMUnop(Munop, Register, Label),
     EMBinop(Mbinop, Register, Register, Label),
     EMuBranch(MuBranch, Register, Label, Label),

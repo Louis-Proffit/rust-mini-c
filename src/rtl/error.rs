@@ -1,15 +1,8 @@
-use std::fmt::{Display, Formatter};
+use crate::rtl::structure::BlockIdent;
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum RtlError {
-    Any(String)
-}
-
-impl Display for RtlError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RtlError::Any(x) => writeln!(f, "{}", x)
-        }
-    }
+    VarNotFound(BlockIdent),
+    DuplicateBlockIdent(BlockIdent),
 }

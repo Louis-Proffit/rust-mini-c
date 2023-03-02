@@ -70,13 +70,14 @@ fn typ_struct<'a>(context: Rc<FileContext<'a>>, structure: &'a parser::Struct<'a
         context.funs().clone(),
     ));
 
-    for field in structure.fields() {
+    for (index, field) in enumerate(structure.fields()) {
         let field_name = field.name();
 
         if let Some(_) = fields.borrow_mut().insert(
             field_name.clone(),
             Rc::new(Field::new(
                 field_name,
+                index,
                 typ_typ(struct_context.clone(), field.typ())?.clone(),
             )),
         ) {

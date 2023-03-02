@@ -4,12 +4,11 @@ pub mod structure;
 
 use std::collections::HashMap;
 use crate::rtl::error::RtlError;
-use crate::rtl::structure::{File, Fresh, Fun, Instr, Mbinop, MuBranch, Munop};
+use crate::rtl::structure::{BlockIdent, File, Fresh, Fun, Instr, Mbinop, MuBranch, Munop};
 use crate::rtl::structure::graph::Graph;
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 use crate::typer::structure as typer;
-use crate::typer::structure::{Binop, BlockIdent};
 
 type RtlResult<T> = Result<T, RtlError>;
 
@@ -34,17 +33,18 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
         let register = Register::fresh();
 
         match local {
-            BlockIdent::Arg(_, _) => {
+            typer::BlockIdent::Arg(_, _) => {
                 // TODO order ?
                 arguments.push(register.clone())
             }
-            BlockIdent::Local(_, _) => {}
+            typer::BlockIdent::Local(_, _) => {}
         }
 
-        match vars.insert(local.clone().into(), register) {
+        let local:BlockIdent = local.clone().into();
+        match vars.insert(local.clone(), register) {
             None => {}
             Some(_) => {
-                return Err(RtlError::Any(format!("Duplicate block name : {:?}", local)));
+                return Err(RtlError::DuplicateBlockIdent(local.clone()));
             }
         }
     }
@@ -125,26 +125,41 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
             graph.insert(Instr::EConst(x.clone(), destr.clone(), destl.clone()))
         ),
         typer::ExprNode::EAccessLocal(var) => {
-            let register = graph.vars().borrow().get(&(var.clone().into())).expect("Failed to find block_ident").clone();
+            let var = var.clone().into();
+            let register = graph
+                .vars()
+                .borrow()
+                .get(&var)
+                .ok_or(RtlError::VarNotFound(var))?
+                .clone();
             Ok(graph.insert(Instr::EMBinop(Mbinop::MMov,
                                            register,
                                            destr.clone(),
                                            destl.clone(),
             )))
         }
-        typer::ExprNode::EAccessField(_, _) => todo!(),
+        typer::ExprNode::EAccessField(expr, y) => {
+            let expr_reg = Register::fresh();
+            let field_lbl = graph.insert(Instr::ELoad(expr_reg.clone(), y.c_offset(), destr.clone(), destl.clone()));
+            rtl_expr(graph, &expr_reg, &field_lbl, expr)
+        }
         typer::ExprNode::EAssignLocal(var, expr) => {
             let expr_reg = graph.vars().borrow().get(&var.clone().into()).expect("Register not found").clone();
             let mov_lbl = graph.insert(Instr::EMBinop(Mbinop::MMov, expr_reg.clone(), destr.clone(), destl.clone()));
             rtl_expr(graph, &expr_reg, &mov_lbl, expr)
         }
-        typer::ExprNode::EAssignField(_, _, _) => todo!(),
+        typer::ExprNode::EAssignField(expr, field, value) => {
+            let value_reg = Register::fresh();
+            let expr_reg = Register::fresh();
+            let store_lbl = graph.insert(Instr::ELoad(expr_reg.clone(), field.c_offset(), value_reg.clone(), destl.clone()));
+            let expr_lbl = rtl_expr(graph, &expr_reg, &store_lbl, expr)?;
+            rtl_expr(graph, &value_reg, &expr_lbl, value)
+        }
         typer::ExprNode::EUnop(unop, expr) => {
             match unop {
                 typer::Unop::UNot => {
-                    let expr_reg = Register::fresh();
-                    let test_lbl = graph.insert(Instr::EMUnop(Munop::Msetei(0), expr_reg.clone(), destl.clone()));
-                    rtl_expr(graph, &expr_reg, &test_lbl, expr)
+                    let test_lbl = graph.insert(Instr::EMUnop(Munop::Msetei(0), destr.clone(), destl.clone()));
+                    rtl_expr(graph, &destr, &test_lbl, expr)
                 }
                 typer::Unop::UMinus => {
                     let expr_reg = Register::fresh();
@@ -156,27 +171,27 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
         }
         typer::ExprNode::EBinop(op, expr_1, expr_2) => {
             match op {
-                Binop::BAdd
-                | Binop::BSub
-                | Binop::BMul
-                | Binop::BDiv
-                | Binop::BEq
-                | Binop::BNeq
-                | Binop::BLt
-                | Binop::BGt
-                | Binop::BGe
-                | Binop::BLe => {
+                typer::Binop::BAdd
+                | typer::Binop::BSub
+                | typer::Binop::BMul
+                | typer::Binop::BDiv
+                | typer::Binop::BEq
+                | typer::Binop::BNeq
+                | typer::Binop::BLt
+                | typer::Binop::BGt
+                | typer::Binop::BGe
+                | typer::Binop::BLe => {
                     let rtl_op = match op {
-                        Binop::BAdd => Mbinop::MAdd,
-                        Binop::BSub => Mbinop::MSub,
-                        Binop::BMul => Mbinop::MMul,
-                        Binop::BDiv => Mbinop::MDiv,
-                        Binop::BEq => Mbinop::MSete,
-                        Binop::BNeq => Mbinop::MSetne,
-                        Binop::BLt => Mbinop::Msetl,
-                        Binop::BGt => Mbinop::Msetg,
-                        Binop::BGe => Mbinop::Msetge,
-                        Binop::BLe => Mbinop::Msetle,
+                        typer::Binop::BAdd => Mbinop::MAdd,
+                        typer::Binop::BSub => Mbinop::MSub,
+                        typer::Binop::BMul => Mbinop::MMul,
+                        typer::Binop::BDiv => Mbinop::MDiv,
+                        typer::Binop::BEq => Mbinop::MSete,
+                        typer::Binop::BNeq => Mbinop::MSetne,
+                        typer::Binop::BLt => Mbinop::Msetge,
+                        typer::Binop::BGt => Mbinop::Msetle,
+                        typer::Binop::BGe => Mbinop::Msetl,
+                        typer::Binop::BLe => Mbinop::Msetg,
                         _ => unreachable!()
                     };
                     let reg_2 = Register::fresh();
@@ -189,8 +204,20 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
                     let expr_2_lbl = rtl_expr(graph, &reg_2, &operation_lbl, expr_2)?;
                     rtl_expr(graph, &destr, &expr_2_lbl, expr_1)
                 }
-                Binop::BAnd => todo!(),
-                Binop::BOr => todo!()
+                typer::Binop::BAnd => {
+                    let set_1_lbl = graph.insert(Instr::EConst(1, destr.clone(), destl.clone()));
+                    let cmp_2_label = graph.insert(Instr::EMuBranch(MuBranch::MJz, destr.clone(), destl.clone(), set_1_lbl));
+                    let expr_2_lbl = rtl_expr(graph, destr, &cmp_2_label, expr_2)?;
+                    let cmp_1_label = graph.insert(Instr::EMuBranch(MuBranch::MJz, destr.clone(), destl.clone(), expr_2_lbl));
+                    rtl_expr(graph, destr, &cmp_1_label, expr_1)
+                }
+                typer::Binop::BOr => {
+                    let set_1_lbl = graph.insert(Instr::EConst(1, destr.clone(), destl.clone()));
+                    let cmp_2_label = graph.insert(Instr::EMuBranch(MuBranch::MJz, destr.clone(), destl.clone(), set_1_lbl.clone()));
+                    let expr_2_lbl = rtl_expr(graph, destr, &cmp_2_label, expr_2)?;
+                    let cmp_1_label = graph.insert(Instr::EMuBranch(MuBranch::MJnz, destr.clone(), set_1_lbl.clone(), expr_2_lbl));
+                    rtl_expr(graph, destr, &cmp_1_label, expr_1)
+                }
             }
         }
         typer::ExprNode::ECall(signature, args) => {

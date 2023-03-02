@@ -4,6 +4,10 @@ use std::fmt::{Debug, Formatter};
 pub mod typer;
 pub mod rtl;
 
+pub const MAIN: &str = "main";
+pub const PUTCHAR: &str = "putchar";
+pub const MALLOC: &str = "malloc";
+
 #[derive(Clone)]
 pub struct Stdout {
     buffer: RefCell<Vec<u8>>,

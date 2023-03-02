@@ -1,31 +1,35 @@
+pub mod defaults;
+pub mod error;
+mod context;
+mod bool;
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use derive_new::new;
-use derive_getters::Getters;
 use crate::interpreter::Stdout;
 use crate::interpreter::typer::bool::{Bool, ToCBool};
+use crate::interpreter::typer::context::{Context, MemoryVar, TyperInterpreterFun};
 use crate::interpreter::typer::defaults::{Malloc, Putchar};
 use crate::interpreter::typer::error::TypInterpreterError;
-use crate::typer::structure::{Binop, Block, BlockIdent, Expr, ExprNode, File, Fun, Ident, Stmt, Unop};
+use crate::typer::structure::{Binop, Block, Expr, ExprNode, File, Ident, Stmt, Unop};
 
+const DEFAULT_RETURN_VALUE: Value = 0;
+type Value = i64;
 
 pub type TyperInterpreterResult<T> = Result<T, TypInterpreterError>;
 
-const DEFAULT_RETURN_VALUE: Value = 0;
-
-pub fn interp_file<'a>(file: File<'a>) -> TyperInterpreterResult<Stdout> {
+pub fn interp_file<'a>(file: &'a File<'a>) -> TyperInterpreterResult<Stdout> {
     let vars = MemoryVar::new();
     let memory = Rc::new(RefCell::new(HashMap::new()));
     let stdout = Rc::new(RefCell::new(Stdout::new()));
 
-    let mut functions: HashMap<Ident, Box<dyn InterpreterCallable + 'a>> = HashMap::new();
-    for (name, fun) in file.into_funs() {
+    let mut functions: HashMap<Ident, Box<dyn TyperInterpreterFun + 'a>> = HashMap::new();
+    for (name, fun) in file.funs() {
         functions.insert(name.clone(), Box::new(fun));
     }
 
-    functions.insert("putchar", Box::new(Putchar::new()));
-    functions.insert("malloc", Box::new(Malloc::new()));
+    functions.insert("putchar", Box::new(Putchar()));
+    functions.insert("malloc", Box::new(Malloc()));
 
     let functions = Rc::new(functions);
 
@@ -165,150 +169,4 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> TyperInterpret
                 .unwrap_or(DEFAULT_RETURN_VALUE))
         }
     }
-}
-
-type Value = i64;
-
-const DEFAULT_VALUE: i64 = 0;
-
-#[derive(new, Getters)]
-struct Context<'a> {
-    vars: MemoryVar<'a>,
-    memory: Rc<RefCell<HashMap<Value, RefCell<MemoryStruct<'a>>>>>,
-    functions: Rc<HashMap<Ident<'a>, Box<dyn InterpreterCallable<'a> + 'a>>>,
-    stdout: Rc<RefCell<Stdout>>,
-}
-
-#[derive(Debug)]
-struct MemoryVar<'a> {
-    vars: HashMap<BlockIdent<'a>, Value>,
-}
-
-impl<'x> MemoryVar<'x> {
-    fn new<'b>() -> MemoryVar<'b> {
-        MemoryVar { vars: HashMap::new() }
-    }
-
-    fn get<'a: 'x>(&mut self, ident: BlockIdent<'a>) -> Value {
-        if !self.vars.contains_key(&ident) {
-            self.vars.insert(ident.clone(), DEFAULT_VALUE);
-        }
-
-        *self.vars.get(&ident).unwrap()
-    }
-
-    fn set<'a: 'x>(&mut self, ident: BlockIdent<'a>, value: Value) {
-        self.vars.insert(ident, value);
-    }
-}
-
-#[derive(Debug)]
-struct MemoryStruct<'a> {
-    fields: HashMap<Ident<'a>, Value>,
-}
-
-impl<'x> MemoryStruct<'x> {
-    fn new<'b>() -> MemoryStruct<'b> {
-        MemoryStruct { fields: HashMap::new() }
-    }
-
-    fn get<'a: 'x>(&mut self, ident: Ident<'a>) -> Value {
-        if self.fields.contains_key(ident) {
-            *self.fields.get(ident).unwrap()
-        } else {
-            self.fields.insert(ident, DEFAULT_VALUE);
-            DEFAULT_VALUE
-        }
-    }
-
-    fn set<'a: 'x>(&mut self, ident: Ident<'a>, value: Value) {
-        self.fields.insert(ident, value);
-    }
-}
-
-trait InterpreterCallable<'a> {
-    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>>;
-}
-
-impl<'a> InterpreterCallable<'a> for Fun<'a> {
-    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
-        interp_block(context, self.block())
-    }
-}
-
-mod bool {
-    use crate::interpreter::typer::Value;
-
-    pub trait Bool {
-        fn bool(&self) -> bool;
-    }
-
-    impl Bool for Value {
-        fn bool(&self) -> bool {
-            *self != 0
-        }
-    }
-
-    pub trait ToCBool {
-        fn to_c_bool(&self) -> Value;
-    }
-
-    impl ToCBool for bool {
-        fn to_c_bool(&self) -> Value {
-            if *self { 1 } else { 0 }
-        }
-    }
-}
-
-pub mod defaults {
-    use std::cell::RefCell;
-    use std::sync::Mutex;
-    use derive_new::new;
-    use crate::interpreter::typer::{Context, InterpreterCallable, TyperInterpreterResult, MemoryStruct, Value};
-    use crate::interpreter::typer::error::TypInterpreterError;
-    use crate::typer::structure::BlockIdent;
-
-    static MEMORY_INDEX: Mutex<i64> = Mutex::new(1);
-
-    #[derive(new)]
-    pub struct Malloc {}
-
-    #[derive(new)]
-    pub struct Putchar {}
-
-    impl<'a> InterpreterCallable<'a> for Putchar {
-        fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
-            for (ident, value) in &context.vars.vars {
-                match ident {
-                    BlockIdent::Arg(0, "c") => {
-                        context.stdout.borrow_mut().putchar(*value as u8);
-                        return Ok(Some(*value))
-                    }
-                    _ => {}
-                }
-            }
-            Err(TypInterpreterError::new())
-        }
-    }
-
-    impl<'a> InterpreterCallable<'a> for Malloc {
-        fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
-            let mut index = MEMORY_INDEX.lock().unwrap();
-
-            context.memory.borrow_mut().insert(*index, RefCell::new(MemoryStruct::new()));
-
-            let old_index = index.clone();
-            *index += 1;
-
-            Ok(Some(old_index))
-        }
-    }
-}
-
-
-pub mod error {
-    use derive_new::new;
-
-    #[derive(Debug, new)]
-    pub struct TypInterpreterError {}
 }

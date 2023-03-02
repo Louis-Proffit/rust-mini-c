@@ -44,6 +44,7 @@ pub struct Formal<'a> {
 #[derive(new, Debug, Getters)]
 pub struct Field<'a> {
     name: Ident<'a>,
+    index: usize,
     typ: Typ<'a>,
 }
 
@@ -105,6 +106,12 @@ impl Struct<'_> {
 
     pub fn c_size(&self) -> Const {
         (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
+    }
+}
+
+impl Field<'_> {
+    pub fn c_offset(&self) -> usize {
+        self.index * 8
     }
 }
 
