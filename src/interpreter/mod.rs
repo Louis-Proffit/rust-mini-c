@@ -1,10 +1,12 @@
+use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 
 pub mod typer;
+pub mod rtl;
 
 #[derive(Clone)]
 pub struct Stdout {
-    buffer: Vec<u8>,
+    buffer: RefCell<Vec<u8>>,
 }
 
 impl Debug for Stdout {
@@ -15,16 +17,16 @@ impl Debug for Stdout {
 
 impl ToString for Stdout {
     fn to_string(&self) -> String {
-        String::from_iter(self.buffer.iter().map(|index| { *index as char }))
+        String::from_iter(self.buffer.borrow().iter().map(|index| { *index as char }))
     }
 }
 
 impl Stdout {
     fn new() -> Stdout {
-        Stdout { buffer: Vec::new() }
+        Stdout { buffer: RefCell::new(Vec::new()) }
     }
 
-    pub fn putchar(&mut self, char: u8) {
-        self.buffer.push(char)
+    pub fn putchar(&self, char: u8) {
+        self.buffer.borrow_mut().push(char)
     }
 }

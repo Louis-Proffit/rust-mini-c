@@ -10,19 +10,11 @@ use crate::interpreter::typer::error::TypInterpreterError;
 use crate::typer::structure::{Binop, Block, BlockIdent, Expr, ExprNode, File, Fun, Ident, Stmt, Unop};
 
 
-pub type InterpreterResult<T> = Result<T, TypInterpreterError>;
+pub type TyperInterpreterResult<T> = Result<T, TypInterpreterError>;
 
 const DEFAULT_RETURN_VALUE: Value = 0;
 
-#[derive(new, Getters)]
-struct Context<'a> {
-    vars: MemoryVar<'a>,
-    memory: Rc<RefCell<HashMap<Value, RefCell<MemoryStruct<'a>>>>>,
-    functions: Rc<HashMap<Ident<'a>, Box<dyn InterpreterCallable<'a> + 'a>>>,
-    stdout: Rc<RefCell<Stdout>>,
-}
-
-pub fn interp_file<'a>(file: File<'a>) -> InterpreterResult<Stdout> {
+pub fn interp_file<'a>(file: File<'a>) -> TyperInterpreterResult<Stdout> {
     let vars = MemoryVar::new();
     let memory = Rc::new(RefCell::new(HashMap::new()));
     let stdout = Rc::new(RefCell::new(Stdout::new()));
@@ -50,7 +42,7 @@ pub fn interp_file<'a>(file: File<'a>) -> InterpreterResult<Stdout> {
     Ok(output)
 }
 
-fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> InterpreterResult<Option<Value>> {
+fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> TyperInterpreterResult<Option<Value>> {
     match stmt {
         Stmt::SSkip => Ok(None),
         Stmt::SExpr(e) => {
@@ -86,7 +78,7 @@ fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> InterpreterRes
     }
 }
 
-fn interp_block<'a>(context: &mut Context<'a>, block: &Block<'a>) -> InterpreterResult<Option<Value>> {
+fn interp_block<'a>(context: &mut Context<'a>, block: &Block<'a>) -> TyperInterpreterResult<Option<Value>> {
     for stmt in block.stmts() {
         if let Some(x) = interp_stmt(context, stmt)? {
             return Ok(Some(x));
@@ -96,7 +88,7 @@ fn interp_block<'a>(context: &mut Context<'a>, block: &Block<'a>) -> Interpreter
     Ok(None)
 }
 
-fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> InterpreterResult<Value> {
+fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> TyperInterpreterResult<Value> {
     match expr.node() {
         ExprNode::EConst(x) => Ok(*x as Value),
         ExprNode::EAccessLocal(x) => {
@@ -179,6 +171,14 @@ type Value = i64;
 
 const DEFAULT_VALUE: i64 = 0;
 
+#[derive(new, Getters)]
+struct Context<'a> {
+    vars: MemoryVar<'a>,
+    memory: Rc<RefCell<HashMap<Value, RefCell<MemoryStruct<'a>>>>>,
+    functions: Rc<HashMap<Ident<'a>, Box<dyn InterpreterCallable<'a> + 'a>>>,
+    stdout: Rc<RefCell<Stdout>>,
+}
+
 #[derive(Debug)]
 struct MemoryVar<'a> {
     vars: HashMap<BlockIdent<'a>, Value>,
@@ -227,11 +227,11 @@ impl<'x> MemoryStruct<'x> {
 }
 
 trait InterpreterCallable<'a> {
-    fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>>;
+    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>>;
 }
 
 impl<'a> InterpreterCallable<'a> for Fun<'a> {
-    fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>> {
+    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
         interp_block(context, self.block())
     }
 }
@@ -264,7 +264,7 @@ pub mod defaults {
     use std::cell::RefCell;
     use std::sync::Mutex;
     use derive_new::new;
-    use crate::interpreter::typer::{Context, InterpreterCallable, InterpreterResult, MemoryStruct, Value};
+    use crate::interpreter::typer::{Context, InterpreterCallable, TyperInterpreterResult, MemoryStruct, Value};
     use crate::interpreter::typer::error::TypInterpreterError;
     use crate::typer::structure::BlockIdent;
 
@@ -277,7 +277,7 @@ pub mod defaults {
     pub struct Putchar {}
 
     impl<'a> InterpreterCallable<'a> for Putchar {
-        fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>> {
+        fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
             for (ident, value) in &context.vars.vars {
                 match ident {
                     BlockIdent::Arg(0, "c") => {
@@ -292,7 +292,7 @@ pub mod defaults {
     }
 
     impl<'a> InterpreterCallable<'a> for Malloc {
-        fn call(&self, context: &mut Context<'a>) -> InterpreterResult<Option<Value>> {
+        fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
             let mut index = MEMORY_INDEX.lock().unwrap();
 
             context.memory.borrow_mut().insert(*index, RefCell::new(MemoryStruct::new()));

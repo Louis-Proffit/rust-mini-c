@@ -10,21 +10,15 @@ pub type StructSize = usize;
 pub type Unop = crate::parser::structure::Unop;
 pub type Binop = crate::parser::structure::Binop;
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub enum BlockIdent<'a> {
-    Arg(usize, Ident<'a>),
-    Local(u8, Ident<'a>),
-}
-
 #[derive(new, Debug, Getters)]
 pub struct File<'a> {
     funs: HashMap<Ident<'a>, Fun<'a>>,
 }
 
-impl<'a> File<'a> {
-    pub fn into_funs(self) -> HashMap<Ident<'a>, Fun<'a>> {
-        self.funs
-    }
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum BlockIdent<'a> {
+    Arg(usize, Ident<'a>),
+    Local(u8, Ident<'a>),
 }
 
 #[derive(new, Debug, Getters)]
@@ -67,14 +61,6 @@ pub struct Struct<'a> {
     fields: Rc<RefCell<HashMap<Ident<'a>, Rc<Field<'a>>>>>, // TODO remove refcell
 }
 
-impl Struct<'_> {
-    const FIELD_SIZE: usize = 8;
-
-    pub fn c_size(&self) -> Const {
-        (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
-    }
-}
-
 #[derive(new, Debug, Getters)]
 pub struct Block<'a> {
     stmts: Vec<Stmt<'a>>,
@@ -112,6 +98,20 @@ pub enum ExprNode<'a> {
     EUnop(Unop, Box<Expr<'a>>),
     EBinop(Binop, Box<Expr<'a>>, Box<Expr<'a>>),
     ECall(Rc<Signature<'a>>, Vec<ArgExpr<'a>>),
+}
+
+impl Struct<'_> {
+    const FIELD_SIZE: usize = 8;
+
+    pub fn c_size(&self) -> Const {
+        (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
+    }
+}
+
+impl<'a> File<'a> {
+    pub fn into_funs(self) -> HashMap<Ident<'a>, Fun<'a>> {
+        self.funs
+    }
 }
 
 impl PartialEq<Self> for Struct<'_> {

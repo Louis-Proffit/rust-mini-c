@@ -20,7 +20,7 @@ pub struct DisplayableGraph<'a> {
     exit: &'a Label,
 }
 
-#[derive(new)]
+#[derive(new, Getters)]
 pub struct DisplayableVar {
     name: String,
     register: Register,

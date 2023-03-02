@@ -9,15 +9,15 @@ use crate::rtl::structure::graph::Graph;
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 use crate::typer::structure as typer;
-use crate::typer::structure::Binop;
+use crate::typer::structure::{Binop, BlockIdent};
 
 type RtlResult<T> = Result<T, RtlError>;
 
 pub fn rtl_file(file: &typer::File) -> RtlResult<File> {
-    let mut funs = vec![];
+    let mut funs = HashMap::new();
 
-    for (_, fun) in file.funs() {
-        funs.push(rtl_fun(fun)?);
+    for (name, fun) in file.funs() {
+        funs.insert(String::from(*name), rtl_fun(fun)?);
     }
 
     Ok(File::new(funs))
@@ -27,10 +27,19 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
     let name = String::from(fun.signature().name().clone());
     let result = Register::fresh();
 
+    let mut arguments = vec![];
     let mut vars = HashMap::new();
 
     for local in fun.locals() {
         let register = Register::fresh();
+
+        match local {
+            BlockIdent::Arg(_, _) => {
+                // TODO order ?
+                arguments.push(register.clone())
+            }
+            BlockIdent::Local(_, _) => {}
+        }
 
         match vars.insert(local.clone().into(), register) {
             None => {}
@@ -54,6 +63,7 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
     Ok(Fun::new(
         name,
         result,
+        arguments,
         entry,
         exit,
         graph,

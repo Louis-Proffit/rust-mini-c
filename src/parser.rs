@@ -470,7 +470,7 @@ pub mod structure {
     use derive_getters::Getters;
 
     pub type Ident<'a> = &'a str;
-    pub type Const = i32;
+    pub type Const = i64;
 
     #[derive(new, Debug, PartialEq, Getters)]
     pub struct File<'a> {

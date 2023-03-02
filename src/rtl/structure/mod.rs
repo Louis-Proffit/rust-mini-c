@@ -2,6 +2,7 @@ pub mod graph;
 pub mod label;
 pub mod register;
 
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
 use derive_getters::Getters;
@@ -27,6 +28,7 @@ pub trait Fresh {
 pub struct Fun {
     name: String,
     result: Register,
+    arguments:Vec<Register>,
     entry: Label,
     exit: Label,
     graph: Graph,
@@ -34,7 +36,7 @@ pub struct Fun {
 
 #[derive(new, Getters)]
 pub struct File {
-    funs: Vec<Fun>,
+    funs: HashMap<String, Fun>,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +89,7 @@ pub enum MbBranch {
 }
 
 struct Registers<'a>(&'a Vec<Register>);
+
 struct DisplayableVars(Vec<DisplayableVar>);
 
 impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent {
@@ -101,8 +104,8 @@ impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent {
 impl Display for File {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== RTL ==================================================")?;
-        for fun in &self.funs {
-            writeln!(f, "{fun}")?;
+        for (_, fun) in &self.funs {
+            writeln!(f, "{}", fun)?;
         }
         Ok(())
     }

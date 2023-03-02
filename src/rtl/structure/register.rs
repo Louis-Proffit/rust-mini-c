@@ -7,7 +7,7 @@ static COUNTER: Mutex<u32> = Mutex::new(1);
 
 pub type Register = Rc<_Register>;
 
-#[derive(Debug)]
+#[derive(Eq, PartialEq, Hash, Debug)]
 pub struct _Register {
     name: String,
 }

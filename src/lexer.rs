@@ -2,11 +2,11 @@ use std::str::FromStr;
 use logos::{Lexer, Logos};
 use parse_int::parse;
 
-fn parse_octal(lex: &mut Lexer<Token>) -> Option<i32> {
-    Some(parse::<i32>(lex.slice()).expect("Wrong octal value"))
+fn parse_octal(lex: &mut Lexer<Token>) -> Option<i64> {
+    Some(parse::<i64>(lex.slice()).expect("Wrong octal value"))
 }
 
-fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i32> {
+fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i64> {
     let slice = lex.slice();
     let without_prefix = match slice.strip_prefix("0x") {
         None => match slice.strip_prefix("0X") {
@@ -15,16 +15,16 @@ fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i32> {
         },
         Some(striped) => Some(striped)
     }?;
-    let z = i32::from_str_radix(without_prefix, 16).ok()?;
+    let z = i64::from_str_radix(without_prefix, 16).ok()?;
     Some(z)
 }
 
-fn parse_char(lex: &mut Lexer<Token>) -> Option<i32> {
+fn parse_char(lex: &mut Lexer<Token>) -> Option<i64> {
     let slice = lex.slice();
     let slice = slice.strip_prefix("'")?;
     let slice = slice.strip_suffix("'")?;
     let c = char::from_str(slice).ok()?;
-    Some((c as u32) as i32)
+    Some((c as u64) as i64)
 }
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
@@ -88,13 +88,13 @@ pub enum Token {
     #[regex("[_a-zA-Z][_a-zA-Z0-9]*")]
     Ident,
     #[regex("[1-9][0-9]*", | lex | lex.slice().parse())]
-    DecimalConstant(i32),
+    DecimalConstant(i64),
     #[regex("0[xX][0-9a-fA-F]+", parse_hexadecimal)]
-    HexConstant(i32),
+    HexConstant(i64),
     #[regex("0[0-7]*", parse_octal)]
-    OctalConstant(i32),
+    OctalConstant(i64),
     #[regex("'.'", parse_char)]
-    CharConstant(i32),
+    CharConstant(i64),
     #[regex(r"'\\n'")]
     NewlineConstant,
 
@@ -115,7 +115,7 @@ mod tests {
     use logos::Logos;
     use crate::lexer::Token;
 
-    fn _test_hexadecimal_valid(to_test: &str, result: i32) {
+    fn _test_hexadecimal_valid(to_test: &str, result: i64) {
         _test_value(to_test, vec![Token::HexConstant(result)])
     }
 
