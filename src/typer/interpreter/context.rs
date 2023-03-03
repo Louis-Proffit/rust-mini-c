@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
-use crate::interpreter::Stdout;
-use crate::interpreter::typer::{interp_block, TyperInterpreterResult, Value};
-use crate::typer::structure::{BlockIdent, Fun, Ident};
+use crate::common::{Ident, Stdout};
+use crate::typer::interpreter::{interp_block, TyperInterpreterResult, Value};
+use crate::typer::structure::{BlockIdent, Fun};
 
 const DEFAULT_FIELD_VALUE: Value = 0;
 
@@ -46,7 +46,7 @@ pub struct MemoryStruct<'a> {
 }
 
 impl<'x> MemoryStruct<'x> {
-    pub fn new<'b>() -> MemoryStruct<'b> {
+    pub fn new<'a>() -> MemoryStruct<'a> {
         MemoryStruct { fields: HashMap::new() }
     }
 

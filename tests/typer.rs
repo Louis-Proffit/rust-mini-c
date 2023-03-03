@@ -1,12 +1,7 @@
 #![feature(assert_matches)]
 
-use std::assert_matches::assert_matches;
 use std::fs::{read_to_string};
-use std::rc::Rc;
-use logos_nom_bridge::Tokens;
-use rust_mini_c::parser::parse_file;
-use rust_mini_c::typer::context::FileContext;
-use rust_mini_c::typer::typ_file;
+use rust_mini_c::{minic_parse};
 
 macro_rules! test_typing_bad {
     ($($name:ident: $path:literal,)*) => {
@@ -35,33 +30,31 @@ macro_rules! test_typing_good {
 fn _test_typing_bad(path: &str) {
     println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let parsed = parse_file(input);
-
-    assert_matches!(parsed, Ok(_));
-
-    let (_, file) = parsed.unwrap();
-    let context = FileContext::default();
-    let typed = typ_file(Rc::new(context), &file);
-
-    assert_matches!(typed, Err(_))
+    let file = read_to_string(path).expect("Failed to read file");
+    match minic_parse(&file)
+        .expect("Failed to parse")
+        .minic_typ() {
+        Ok(file) => {
+            println!("{:?}", file);
+            assert!(false);
+        }
+        Err(_) => {}
+    }
 }
 
 fn _test_typing_good(path: &str) {
     println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let parsed = parse_file(input);
-
-    assert_matches!(parsed, Ok(_));
-
-    let (_, file) = parsed.unwrap();
-    let context = FileContext::default();
-    let typed = typ_file(Rc::new(context), &file);
-
-    assert_matches!(typed, Ok(_))
+    let file = read_to_string(path).expect("Failed to read file");
+    match minic_parse(&file)
+        .expect("Failed to parse")
+        .minic_typ() {
+        Ok(_) => {}
+        Err(err) => {
+            println!("{:?}", err);
+            assert!(false);
+        }
+    }
 }
 
 

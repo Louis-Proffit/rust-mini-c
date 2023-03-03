@@ -1,9 +1,9 @@
 pub mod malloc {
     use std::collections::HashMap;
     use std::sync::Mutex;
-    use crate::interpreter::rtl::{RtlInterpFun, RtlInterpreterResult, Value};
-    use crate::interpreter::rtl::context::Context;
-    use crate::interpreter::rtl::error::RtlInterpreterError;
+    use crate::rtl::interpreter::context::Context;
+    use crate::rtl::interpreter::{RtlInterpFun, RtlInterpreterResult, Value};
+    use crate::rtl::interpreter::error::RtlInterpreterError;
     use crate::rtl::structure::Fresh;
     use crate::rtl::structure::label::Label;
     use crate::rtl::structure::register::Register;
@@ -54,9 +54,9 @@ pub mod malloc {
 }
 
 pub mod putchar {
-    use crate::interpreter::rtl::context::Context;
-    use crate::interpreter::rtl::{RtlInterpFun, RtlInterpreterResult};
-    use crate::interpreter::rtl::error::RtlInterpreterError;
+    use crate::rtl::interpreter::context::Context;
+    use crate::rtl::interpreter::error::RtlInterpreterError;
+    use crate::rtl::interpreter::{RtlInterpFun, RtlInterpreterResult};
     use crate::rtl::structure::Fresh;
     use crate::rtl::structure::label::Label;
     use crate::rtl::structure::register::Register;
@@ -91,7 +91,7 @@ pub mod putchar {
                 .ok_or(RtlInterpreterError::Other("Pas d'argument pour la fonction putchar"))?;
 
             let val = context.get(arg);
-            context.stdout().putchar(val as u8);
+            context.stdout().putchar(val as u8 as char);
 
             Ok(())
         }

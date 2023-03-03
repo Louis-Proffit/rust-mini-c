@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
-use crate::interpreter::rtl::{RtlInterpFun, Value};
-use crate::interpreter::Stdout;
+use crate::common::{Stdout, Value};
+use crate::rtl::interpreter::RtlInterpFun;
 use crate::rtl::structure::register::Register;
 
 const DEFAULT_REGISTER_VALUE: Value = 0;
@@ -14,8 +14,8 @@ pub struct Context<'a> {
     stdout: Rc<Stdout>,
     funs: Rc<HashMap<String, Rc<dyn RtlInterpFun + 'a>>>,
     fun: Rc<dyn RtlInterpFun + 'a>,
-    regs: RefCell<HashMap<Register, Value>>,
-    memory: RefCell<HashMap<Value, HashMap<usize, Value>>>,
+    regs: Rc<RefCell<HashMap<Register, Value>>>,
+    memory: Rc<RefCell<HashMap<Value, HashMap<usize, Value>>>>,
 }
 
 impl Context<'_> {

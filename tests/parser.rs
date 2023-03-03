@@ -1,9 +1,5 @@
-#![feature(assert_matches)]
-
-use std::assert_matches::assert_matches;
 use std::fs::{read_to_string};
-use logos_nom_bridge::Tokens;
-use rust_mini_c::parser::parse_file;
+use rust_mini_c::{minic_parse};
 
 macro_rules! test_syntax_bad {
     ($($name:ident: $path:literal,)*) => {
@@ -32,23 +28,27 @@ macro_rules! test_syntax_good {
 fn _test_syntax_bad(path: &str) {
     println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let parsed = parse_file(input);
-
-    // println!("{:?}", parsed);
-    assert_matches!(parsed, Err(_))
+    let file = read_to_string(path).expect("Failed to read file");
+    match minic_parse(&file) {
+        Ok(ok) => {
+            println!("{:?}", ok);
+            assert!(false);
+        }
+        Err(_) => {}
+    }
 }
 
 fn _test_syntax_good(path: &str) {
     println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let parsed = parse_file(input);
-
-    // println!("{:?}", parsed);
-    assert_matches!(parsed, Ok(_))
+    let file = read_to_string(path).expect("Failed to read file");
+    match minic_parse(&file) {
+        Ok(_) => {}
+        Err(err) => {
+            println!("{:?}", err);
+            assert!(false);
+        }
+    }
 }
 
 

@@ -1,24 +1,23 @@
 pub mod defaults;
 pub mod error;
 mod context;
-mod bool;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::interpreter::Stdout;
-use crate::interpreter::typer::bool::{Bool, ToCBool};
-use crate::interpreter::typer::context::{Context, MemoryVar, TyperInterpreterFun};
-use crate::interpreter::typer::defaults::{Malloc, Putchar};
-use crate::interpreter::typer::error::TypInterpreterError;
-use crate::typer::structure::{Binop, Block, Expr, ExprNode, File, Ident, Stmt, Unop};
+use crate::common::bool::{Bool, ToCBool};
+use crate::common::{Ident, Stdout};
+use crate::typer::interpreter::context::{Context, MemoryVar, TyperInterpreterFun};
+use crate::typer::interpreter::defaults::{Malloc, Putchar};
+use crate::typer::interpreter::error::TypInterpreterError;
+use crate::typer::structure::{Binop, Block, Expr, ExprNode, File, Stmt, Unop};
 
 const DEFAULT_RETURN_VALUE: Value = 0;
 type Value = i64;
 
 pub type TyperInterpreterResult<T> = Result<T, TypInterpreterError>;
 
-pub fn interp_file<'a>(file: &'a File<'a>) -> TyperInterpreterResult<Stdout> {
+pub fn interp_typed_file<'a>(file: &'a File<'a>) -> TyperInterpreterResult<Stdout> {
     let vars = MemoryVar::new();
     let memory = Rc::new(RefCell::new(HashMap::new()));
     let stdout = Rc::new(RefCell::new(Stdout::new()));
@@ -55,7 +54,7 @@ fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> TyperInterpret
             Ok(None)
         }
         Stmt::SIf(expr, stmt_if, stmt_else) => {
-            if let Some(x) = if interp_expr(context, expr)?.bool() {
+            if let Some(x) = if interp_expr(context, expr)?.to_bool() {
                 interp_stmt(context, stmt_if)?
             } else {
                 interp_stmt(context, stmt_else)?
@@ -66,7 +65,7 @@ fn interp_stmt<'a>(context: &mut Context<'a>, stmt: &Stmt<'a>) -> TyperInterpret
             Ok(None)
         }
         Stmt::SWhile(expr, stmt) => {
-            while interp_expr(context, expr)?.bool() {
+            while interp_expr(context, expr)?.to_bool() {
                 if let Some(x) = interp_stmt(context, stmt)? {
                     return Ok(Some(x));
                 }
@@ -128,20 +127,20 @@ fn interp_expr<'a>(context: &mut Context<'a>, expr: &Expr<'a>) -> TyperInterpret
         }
         ExprNode::EUnop(unop, expr) => Ok(match unop {
             Unop::UNot => {
-                if interp_expr(context, expr)?.bool() { 0 } else { 1 }
+                if interp_expr(context, expr)?.to_bool() { 0 } else { 1 }
             }
             Unop::UMinus => -interp_expr(context, expr)?
         }),
         ExprNode::EBinop(binop, expr_1, expr_2) => Ok(
             match binop {
-                Binop::BEq => (interp_expr(context, expr_1)? == interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BNeq => (interp_expr(context, expr_1)? != interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BLt => (interp_expr(context, expr_1)? < interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BGt => (interp_expr(context, expr_1)? > interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BGe => (interp_expr(context, expr_1)? >= interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BLe => (interp_expr(context, expr_1)? <= interp_expr(context, expr_2)?).to_c_bool(),
-                Binop::BAnd => (interp_expr(context, expr_1)?.bool() && interp_expr(context, expr_2)?.bool()).to_c_bool(),
-                Binop::BOr => (interp_expr(context, expr_1)?.bool() || interp_expr(context, expr_2)?.bool()).to_c_bool(),
+                Binop::BEq => (interp_expr(context, expr_1)? == interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BNeq => (interp_expr(context, expr_1)? != interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BLt => (interp_expr(context, expr_1)? < interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BGt => (interp_expr(context, expr_1)? > interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BGe => (interp_expr(context, expr_1)? >= interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BLe => (interp_expr(context, expr_1)? <= interp_expr(context, expr_2)?).to_minic_bool(),
+                Binop::BAnd => (interp_expr(context, expr_1)?.to_bool() && interp_expr(context, expr_2)?.to_bool()).to_minic_bool(),
+                Binop::BOr => (interp_expr(context, expr_1)?.to_bool() || interp_expr(context, expr_2)?.to_bool()).to_minic_bool(),
                 Binop::BAdd => interp_expr(context, expr_1)? + interp_expr(context, expr_2)?,
                 Binop::BSub => interp_expr(context, expr_1)? - interp_expr(context, expr_2)?,
                 Binop::BMul => interp_expr(context, expr_1)? * interp_expr(context, expr_2)?,

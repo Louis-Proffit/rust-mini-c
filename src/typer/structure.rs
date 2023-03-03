@@ -3,10 +3,9 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
+use crate::common::{Value, Ident};
 
-pub type Ident<'a> = crate::parser::structure::Ident<'a>;
-pub type Const = crate::parser::structure::Const;
-pub type StructSize = usize;
+pub type StructSize = Value;
 pub type Unop = crate::parser::structure::Unop;
 pub type Binop = crate::parser::structure::Binop;
 
@@ -91,7 +90,7 @@ pub struct ArgExpr<'a> {
 
 #[derive(Debug)]
 pub enum ExprNode<'a> {
-    EConst(Const),
+    EConst(Value),
     EAccessLocal(BlockIdent<'a>),
     EAccessField(Box<Expr<'a>>, Rc<Field<'a>>),
     EAssignLocal(BlockIdent<'a>, Box<Expr<'a>>),
@@ -104,8 +103,8 @@ pub enum ExprNode<'a> {
 impl Struct<'_> {
     const FIELD_SIZE: usize = 8;
 
-    pub fn c_size(&self) -> Const {
-        (self.fields.borrow().len() * Struct::FIELD_SIZE) as Const
+    pub fn c_size(&self) -> StructSize {
+        (self.fields.borrow().len() * Struct::FIELD_SIZE) as Value
     }
 }
 

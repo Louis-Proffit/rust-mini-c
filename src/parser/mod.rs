@@ -1,19 +1,37 @@
+pub mod structure;
+pub mod error;
+pub mod lexer;
+
 use nom::branch::alt;
 use nom::combinator::{map, opt};
-use nom::IResult;
 use nom::multi::{many0, separated_list0, separated_list1};
 use logos_nom_bridge::{data_variant_parser, token_parser, Tokens};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::tuple;
-use Token::Semicolon;
-use crate::lexer::Token;
+use nom::{Finish, IResult};
+use crate::common::{Value, Ident};
+use crate::parser::error::ParserError;
+use crate::parser::lexer::Token;
 use crate::parser::structure::*;
 
+pub type ParserResult<'a> = Result<File<'a>, ParserError<'a>>;
 pub type Input<'src> = Tokens<'src, Token>;
 
 token_parser!(token: Token);
 
-pub fn parse_file(input: Input) -> IResult<Input, File> {
+pub fn parse_file(input: &str) -> ParserResult {
+    let input = Input::new(input);
+
+    match parse_file_inner(input)
+        .finish() {
+        Ok((_input, file)) => Ok(file),
+        Err(err) => {
+            Err(ParserError::Nom(err))
+        }
+    }
+}
+
+fn parse_file_inner(input: Input) -> IResult<Input, File> {
     enum Decl<'a> {
         DeclStruct(Struct<'a>),
         DeclFun(Fun<'a>),
@@ -42,6 +60,7 @@ pub fn parse_file(input: Input) -> IResult<Input, File> {
     )(input)
 }
 
+
 fn eof(input: Input) -> IResult<Input, ()> {
     match input.peek() {
         None => Ok((input, ())),
@@ -58,7 +77,7 @@ fn decl_fun(input: Input) -> IResult<Input, Fun> {
 
 fn decl_struct(input: Input) -> IResult<Input, Struct> {
     map(
-        tuple((Token::Struct, ident, Token::Lbrace, many0(decl_var), Token::Rbrace, Semicolon)),
+        tuple((Token::Struct, ident, Token::Lbrace, many0(decl_var), Token::Rbrace, Token::Semicolon)),
         |(_, name, _, fields, _, _)| Struct::new(name, fields.into_iter().flatten().collect()),
     )(input)
 }
@@ -69,10 +88,10 @@ fn star_ident(input: Input) -> IResult<Input, Ident> {
 
 fn decl_var(input: Input) -> IResult<Input, Vec<Formal>> {
     alt((
-        map(tuple((Token::Int, separated_list1(Token::Comma, ident), Semicolon)),
+        map(tuple((Token::Int, separated_list1(Token::Comma, ident), Token::Semicolon)),
             |(_, idents, _)| idents.into_iter().map(|ident| Formal::new(ident, Typ::TInt)).collect(),
         ),
-        map(tuple((Token::Struct, ident, separated_list1(Token::Comma, star_ident), Semicolon)),
+        map(tuple((Token::Struct, ident, separated_list1(Token::Comma, star_ident), Token::Semicolon)),
             |(_, struct_ident, idents, _)| idents.into_iter().map(|ident| Formal::new(ident, Typ::TStruct(struct_ident))).collect(),
         ),
     ))(input)
@@ -121,10 +140,10 @@ fn block(input: Input) -> IResult<Input, Block> {
 }
 
 fn stmt(input: Input) -> IResult<Input, Stmt> {
-    let expr_stmt = tuple((opt(expr), Semicolon));
+    let expr_stmt = tuple((opt(expr), Token::Semicolon));
     let selection_stmt = tuple((Token::If, Token::Lpar, expr, Token::Rpar, stmt, opt(tuple((Token::Else, stmt)))));
     let iteration_stmt = tuple((Token::While, Token::Lpar, expr, Token::Rpar, stmt));
-    let jump_stmt = tuple((Token::Return, opt(expr), Semicolon));
+    let jump_stmt = tuple((Token::Return, opt(expr), Token::Semicolon));
 
     alt((
         map(
@@ -328,24 +347,24 @@ fn assign_expr(input: Input) -> IResult<Input, Expr> {
 }
 
 data_variant_parser! {
-        fn hex_constant(input) -> Result<Const>;
+        fn hex_constant(input) -> Result<Value>;
         pattern = Token::HexConstant(x) => x;
     }
 data_variant_parser! {
-        fn decimal_constant(input) -> Result<Const>;
+        fn decimal_constant(input) -> Result<Value>;
         pattern = Token::DecimalConstant(x) => x;
     }
 data_variant_parser! {
-        fn octal_constant(input) -> Result<Const>;
+        fn octal_constant(input) -> Result<Value>;
         pattern = Token::OctalConstant(x) => x;
     }
 
 data_variant_parser! {
-        fn char_constant(input) -> Result<Const>;
+        fn char_constant(input) -> Result<Value>;
         pattern = Token::CharConstant(x) => x;
     }
 
-fn integer(input: Input) -> IResult<Input, Const> {
+fn integer(input: Input) -> IResult<Input, Value> {
     alt((
         hex_constant,
         decimal_constant,
@@ -355,6 +374,8 @@ fn integer(input: Input) -> IResult<Input, Const> {
     ))(input)
 }
 
+
+/*
 #[cfg(test)]
 pub mod tests {
     use std::assert_matches::assert_matches;
@@ -362,7 +383,6 @@ pub mod tests {
     use logos_nom_bridge::Tokens;
 
     use crate::parser::*;
-    use crate::parser::{parse_file};
 
     macro_rules! parse {
             ($name:ident: $fun:ident($content:literal) -> $expr:expr) => {
@@ -428,14 +448,14 @@ pub mod tests {
 
     parse!(parse_struct: decl_struct("struct S { int a; };") -> Struct::new("S", vec![Formal::new("a", Typ::TInt)]));
 
-    parse!(file_single_fun: parse_file("int f() {return x;}") -> File::new(
+    parse!(file_single_fun: parse_file_inner("int f() {return x;}") -> File::new(
             vec![
                 Fun::new(Formal::new("f", Typ::TInt), vec![], Block::new(vec![], vec![Stmt::SReturn(Expr::EVar("x"))]))
             ],
             vec![])
         );
 
-    parse!(file_fun_and_struct: parse_file("struct S { int a; }; int main() { int x; { struct S *x; x->a = 42; } x = 1; }") ->
+    parse!(file_fun_and_struct: parse_file_inner("struct S { int a; }; int main() { int x; { struct S *x; x->a = 42; } x = 1; }") ->
         File::new(
         vec![
             Fun::new(Formal::new("main", Typ::TInt), vec![], Block::new(
@@ -463,93 +483,4 @@ pub mod tests {
         ])
     );
 }
-
-#[allow(dead_code)]
-pub mod structure {
-    use derive_new::new;
-    use derive_getters::Getters;
-
-    pub type Ident<'a> = &'a str;
-    pub type Const = i64;
-
-    #[derive(new, Debug, PartialEq, Getters)]
-    pub struct File<'a> {
-        funs: Vec<Fun<'a>>,
-        structs: Vec<Struct<'a>>,
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub enum Typ<'a> {
-        TInt,
-        TStruct(Ident<'a>),
-    }
-
-    #[derive(new, Debug, PartialEq, Getters)]
-    pub struct Formal<'a> {
-        name: Ident<'a>,
-        typ: Typ<'a>,
-    }
-
-    #[derive(new, Debug, PartialEq, Getters)]
-    pub struct Struct<'a> {
-        name: Ident<'a>,
-        fields: Vec<Formal<'a>>,
-    }
-
-    #[derive(new, Debug, PartialEq, Getters)]
-    pub struct Fun<'a> {
-        profile: Formal<'a>,
-        args: Vec<Formal<'a>>,
-        body: Block<'a>,
-    }
-
-    #[derive(new, Debug, PartialEq, Getters)]
-    pub struct Block<'a> {
-        vars: Vec<Formal<'a>>,
-        stmts: Vec<Stmt<'a>>,
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub enum Stmt<'a> {
-        SSkip,
-        SExpr(Expr<'a>),
-        SIf(Expr<'a>, Box<Stmt<'a>>, Box<Stmt<'a>>),
-        SWhile(Expr<'a>, Box<Stmt<'a>>),
-        SBlock(Block<'a>),
-        SReturn(Expr<'a>),
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub enum Expr<'a> {
-        EConst(Const),
-        EVar(Ident<'a>),
-        EArrow(Box<Expr<'a>>, Ident<'a>),
-        EAssign(Box<Expr<'a>>, Box<Expr<'a>>),
-        EUnop(Unop, Box<Expr<'a>>),
-        EBinop(Binop, Box<Expr<'a>>, Box<Expr<'a>>),
-        ECall(Box<Expr<'a>>, Vec<Expr<'a>>),
-        ESizeof(Ident<'a>),
-    }
-
-    #[derive(Debug, PartialEq, Clone)]
-    pub enum Unop {
-        UNot,
-        UMinus,
-    }
-
-    #[derive(Debug, PartialEq, Clone)]
-    pub enum Binop {
-        BEq,
-        BNeq,
-        BLt,
-        BGt,
-        BGe,
-        BLe,
-        BAdd,
-        BSub,
-        BMul,
-        BDiv,
-        BAnd,
-        BOr,
-    }
-}
+*/

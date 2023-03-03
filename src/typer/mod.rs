@@ -1,6 +1,7 @@
 pub mod context;
 pub mod error;
 pub mod structure;
+pub mod interpreter;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};

@@ -1,33 +1,25 @@
-#![feature(assert_matches)]
-
-use std::assert_matches::assert_matches;
 use std::fs::{read_to_string};
-use std::rc::Rc;
-use logos_nom_bridge::Tokens;
-use rust_mini_c::interpreter::typer::interp_file;
-use rust_mini_c::parser::parse_file;
-use rust_mini_c::typer::context::FileContext;
-use rust_mini_c::typer::typ_file;
+use rust_mini_c::{minic_parse};
 
-macro_rules! test_exec_bad {
+macro_rules! test_bad {
     ($($name:ident: $path:literal,)*) => {
         $(
         #[test]
         #[should_panic]
         fn $name() {
-            _test_exec_bad($path);
+            _test_bad($path);
         }
         )*
 
     };
 }
 
-macro_rules! test_exec_good {
+macro_rules! test_good {
     ($($name:ident: $path:literal->$expected_path:literal,)*) => {
         $(
         #[test]
         fn $name() {
-            _test_exec_good($path, $expected_path);
+            _test_good($path, $expected_path);
         }
         )*
 
@@ -35,44 +27,69 @@ macro_rules! test_exec_good {
 }
 
 
-fn _test_exec_bad(path: &str) {
+fn _test_bad(path: &str) {
     println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let (_, file) = parse_file(input).unwrap();
-
-    let context = FileContext::default();
-    let file = typ_file(Rc::new(context), &file).unwrap();
-
-    let interp = interp_file(file);
-
-    assert_matches!(interp, Err(_));
+    let file = read_to_string(path).expect("Failed to read file");
+    match minic_parse(&file)
+        .expect("Failed to parse file")
+        .minic_typ()
+        .expect("Failed to typ file")
+        .minic_rtl()
+        .expect("Failed to rtl file")
+        .minic_interp() {
+        Ok(out) => {
+            println!("{}", out);
+            assert!(false)
+        }
+        Err(err) => {
+            println!("{}", err)
+        }
+    }
 }
 
-fn _test_exec_good(path: &str, expected_path: &str) {
-    println!("File {}, expected output : {}", path, expected_path);
+fn _test_good(path: &str, expected_path: &str) {
+    println!("File {}", path);
 
-    let content = read_to_string(path).unwrap();
-    let input = Tokens::new(&content);
-    let (_, file) = parse_file(input).unwrap();
+    let file = read_to_string(path).expect("Failed to read file");
+    let expected = read_to_string(expected_path).expect("Failed to read expected file");
 
-    let context = FileContext::default();
-    let file = typ_file(Rc::new(context), &file).unwrap();
+    let parsed = minic_parse(&file)
+        .expect("Failed to parse file");
 
-    let interp = interp_file(file).unwrap();
-    let output = interp.to_string();
+    let typed = parsed.minic_typ()
+        .expect("Failed to typ file");
 
-    let expected = read_to_string(expected_path).unwrap();
+    /*match typed.minic_interp() {
+        Ok(x) => {
+            assert_eq!(x.to_string(), expected);
+        }
+        Err(err) => {
+            println!("{:?} TODO display",err);
+            assert!(false)
+        }
+    }*/
 
-    assert_eq!(expected, output);
+    let rtl = typed.minic_rtl()
+        .expect("Failed to rtl file");
+    // println!("Rtled : {} TODO display", rtl);
+
+    match rtl.minic_interp() {
+        Ok(x) => {
+            assert_eq!(expected, x.to_string());
+        }
+        Err(err) => {
+            println!("{:?} TODO display", err);
+            assert!(false)
+        }
+    }
 }
 
 
 mod good {
-    use crate::_test_exec_good;
+    use crate::_test_good;
 
-    test_exec_good!(
+    test_good!(
     abr: "tests/source/exec/abr.c" -> "tests/source/exec/abr.out",
     and_1: "tests/source/exec/and1.c" -> "tests/source/exec/and1.out",
     and_2: "tests/source/exec/and2.c" -> "tests/source/exec/and2.out",
@@ -137,9 +154,9 @@ mod good {
 }
 
 mod bad {
-    use crate::_test_exec_bad;
+    use crate::_test_bad;
 
-    test_exec_bad!(
+    test_bad!(
         deref_null: "tests/source/exec-fail/deref_null.c",
         division_by_zero: "tests/source/exec-fail/division_by_zero1.c",
     );

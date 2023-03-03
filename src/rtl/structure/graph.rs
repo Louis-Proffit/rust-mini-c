@@ -79,6 +79,7 @@ impl Graph {
 impl DisplayableGraph<'_> {
     fn visit(&self, visited: &mut HashSet<Label>, label: &Label, f: &mut Formatter<'_>) -> std::fmt::Result {
         if !visited.contains(label) && label != self.exit {
+            visited.insert(label.clone());
             let instr = self.graph.instrs.borrow().get(label).unwrap().clone();
             writeln!(f, "\t{}: {}", label, instr)?;
             match instr {

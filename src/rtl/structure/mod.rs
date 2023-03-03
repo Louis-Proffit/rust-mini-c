@@ -6,25 +6,17 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
 use derive_getters::Getters;
+use crate::common::Value;
 use crate::rtl::structure::graph::{Graph, DisplayableGraph, DisplayableVar};
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 
-pub type Const = crate::typer::structure::Const;
-
-#[derive(Eq, Hash, PartialEq, Debug, Clone)]
-pub enum BlockIdent {
-    Arg(usize, String),
-    Local(u8, String),
+#[derive(new, Getters, Debug)]
+pub struct File {
+    funs: HashMap<String, Fun>,
 }
 
-pub trait Fresh {
-    type Item;
-
-    fn fresh() -> Self::Item;
-}
-
-#[derive(new, Getters)]
+#[derive(new, Getters, Debug)]
 pub struct Fun {
     name: String,
     result: Register,
@@ -34,14 +26,9 @@ pub struct Fun {
     graph: Graph,
 }
 
-#[derive(new, Getters)]
-pub struct File {
-    funs: HashMap<String, Fun>,
-}
-
 #[derive(Debug, Clone)]
 pub enum Instr {
-    EConst(Const, Register, Label),
+    EConst(Value, Register, Label),
     ELoad(Register, usize, Register, Label),
     EStore(Register, Register, usize, Label),
     EMUnop(Munop, Register, Label),
@@ -54,9 +41,9 @@ pub enum Instr {
 
 #[derive(Debug, Clone)]
 pub enum Munop {
-    Maddi(Const),
-    Msetei(Const),
-    Msetnei(Const),
+    Maddi(Value),
+    Msetei(Value),
+    Msetnei(Value),
 }
 
 #[derive(Debug, Clone)]
@@ -78,14 +65,26 @@ pub enum Mbinop {
 pub enum MuBranch {
     MJz,
     MJnz,
-    MJlei(Const),
-    MJgi(Const),
+    MJlei(Value),
+    MJgi(Value),
 }
 
 #[derive(Debug, Clone)]
 pub enum MbBranch {
     MJl,
     MJle,
+}
+
+#[derive(Eq, Hash, PartialEq, Debug, Clone)]
+pub enum BlockIdent {
+    Arg(usize, String),
+    Local(u8, String),
+}
+
+pub trait Fresh {
+    type Item;
+
+    fn fresh() -> Self::Item;
 }
 
 struct Registers<'a>(&'a Vec<Register>);
@@ -123,6 +122,7 @@ impl Display for Fun {
             &self.entry,
             &self.exit,
         );
+
         write!(f, "{}", printable_graph)?;
         Ok(())
     }

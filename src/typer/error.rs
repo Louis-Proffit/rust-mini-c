@@ -1,7 +1,8 @@
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
-use crate::typer::structure::{BlockIdent, Ident, Struct, Typ};
+use crate::common::Ident;
+use crate::typer::structure::{BlockIdent, Struct, Typ};
 
 #[allow(dead_code)]
 #[derive(new, Debug)]
@@ -10,12 +11,14 @@ pub struct DuplicateFieldName<'a> {
     field_name: Ident<'a>,
 }
 
+#[allow(dead_code)]
 #[derive(new, Debug, Getters)]
 pub struct IncompatibleTyp<'a> {
     expected: Typ<'a>,
     actual: Typ<'a>,
 }
 
+#[allow(dead_code)]
 #[derive(new, Debug, Getters)]
 pub struct DuplicateArgName<'a> {
     arg_name: BlockIdent<'a>,

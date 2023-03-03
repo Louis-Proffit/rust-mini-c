@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::sync::Mutex;
-use crate::interpreter::typer::{Context, TyperInterpreterFun, TyperInterpreterResult, Value};
-use crate::interpreter::typer::context::MemoryStruct;
-use crate::interpreter::typer::error::TypInterpreterError;
+use crate::typer::interpreter::context::{Context, MemoryStruct, TyperInterpreterFun};
+use crate::typer::interpreter::{TyperInterpreterResult, Value};
+use crate::typer::interpreter::error::TypInterpreterError;
 use crate::typer::structure::BlockIdent;
 
 static MALLOC_MEMORY_INDEX: Mutex<Value> = Mutex::new(1);
@@ -16,7 +16,7 @@ impl<'a> TyperInterpreterFun<'a> for Putchar {
         for (ident, value) in &context.vars.vars {
             match ident {
                 BlockIdent::Arg(0, "c") => {
-                    context.stdout.borrow_mut().putchar(*value as u8);
+                    context.stdout.borrow_mut().putchar(*value as u8 as char);
                     return Ok(Some(*value));
                 }
                 _ => {}

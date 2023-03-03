@@ -1,12 +1,13 @@
 use std::str::FromStr;
 use logos::{Lexer, Logos};
 use parse_int::parse;
+use crate::common::Value;
 
-fn parse_octal(lex: &mut Lexer<Token>) -> Option<i64> {
-    Some(parse::<i64>(lex.slice()).expect("Wrong octal value"))
+fn parse_octal(lex: &mut Lexer<Token>) -> Option<Value> {
+    Some(parse::<Value>(lex.slice()).expect("Wrong octal value"))
 }
 
-fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i64> {
+fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<Value> {
     let slice = lex.slice();
     let without_prefix = match slice.strip_prefix("0x") {
         None => match slice.strip_prefix("0X") {
@@ -15,16 +16,16 @@ fn parse_hexadecimal(lex: &mut Lexer<Token>) -> Option<i64> {
         },
         Some(striped) => Some(striped)
     }?;
-    let z = i64::from_str_radix(without_prefix, 16).ok()?;
+    let z = Value::from_str_radix(without_prefix, 16).ok()?;
     Some(z)
 }
 
-fn parse_char(lex: &mut Lexer<Token>) -> Option<i64> {
+fn parse_char(lex: &mut Lexer<Token>) -> Option<Value> {
     let slice = lex.slice();
     let slice = slice.strip_prefix("'")?;
     let slice = slice.strip_suffix("'")?;
     let c = char::from_str(slice).ok()?;
-    Some((c as u64) as i64)
+    Some((c as u64) as Value)
 }
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
@@ -88,13 +89,13 @@ pub enum Token {
     #[regex("[_a-zA-Z][_a-zA-Z0-9]*")]
     Ident,
     #[regex("[1-9][0-9]*", | lex | lex.slice().parse())]
-    DecimalConstant(i64),
+    DecimalConstant(Value),
     #[regex("0[xX][0-9a-fA-F]+", parse_hexadecimal)]
-    HexConstant(i64),
+    HexConstant(Value),
     #[regex("0[0-7]*", parse_octal)]
-    OctalConstant(i64),
+    OctalConstant(Value),
     #[regex("'.'", parse_char)]
-    CharConstant(i64),
+    CharConstant(Value),
     #[regex(r"'\\n'")]
     NewlineConstant,
 
@@ -113,9 +114,10 @@ pub enum Token {
 #[cfg(test)]
 mod tests {
     use logos::Logos;
-    use crate::lexer::Token;
+    use crate::common::Value;
+    use crate::parser::lexer::Token;
 
-    fn _test_hexadecimal_valid(to_test: &str, result: i64) {
+    fn _test_hexadecimal_valid(to_test: &str, result: Value) {
         _test_value(to_test, vec![Token::HexConstant(result)])
     }
 

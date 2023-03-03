@@ -5,7 +5,8 @@ use std::ops::Deref;
 use std::rc::Rc;
 use derive_getters::Getters;
 use derive_new::new;
-use crate::typer::structure::{BlockIdent, Formal, Ident, Signature, Struct, Typ};
+use crate::common::Ident;
+use crate::typer::structure::{BlockIdent, Formal, Signature, Struct, Typ};
 
 #[derive(new, Debug, Getters, Clone)]
 pub struct FileContext<'a> {

@@ -1,5 +1,5 @@
 pub mod error;
-
+pub mod interpreter;
 pub mod structure;
 
 use std::collections::HashMap;
@@ -10,7 +10,7 @@ use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 use crate::typer::structure as typer;
 
-type RtlResult<T> = Result<T, RtlError>;
+pub type RtlResult<T> = Result<T, RtlError>;
 
 pub fn rtl_file(file: &typer::File) -> RtlResult<File> {
     let mut funs = HashMap::new();
@@ -29,22 +29,24 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
     let mut arguments = vec![];
     let mut vars = HashMap::new();
 
+    for argument in fun.signature().args() {
+        let register = Register::fresh();
+        arguments.push(register.clone());
+        vars.insert(argument.name().clone().into(), register);
+    }
+
     for local in fun.locals() {
         let register = Register::fresh();
 
-        match local {
-            typer::BlockIdent::Arg(_, _) => {
-                // TODO order ?
-                arguments.push(register.clone())
-            }
-            typer::BlockIdent::Local(_, _) => {}
-        }
+        let local: BlockIdent = local.clone().into();
 
-        let local:BlockIdent = local.clone().into();
-        match vars.insert(local.clone(), register) {
-            None => {}
-            Some(_) => {
-                return Err(RtlError::DuplicateBlockIdent(local.clone()));
+        match local {
+            BlockIdent::Arg(_, _) => {}
+            BlockIdent::Local(_, _) => match vars.insert(local.clone(), register) {
+                None => {}
+                Some(_) => {
+                    return Err(RtlError::DuplicateBlockIdent(local.clone()));
+                }
             }
         }
     }
@@ -250,18 +252,17 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
 #[cfg(test)]
 mod tests {
     use std::fs::read_to_string;
-    use std::rc::Rc;
-    use crate::parser::{Input, parse_file};
-    use crate::rtl::rtl_file;
-    use crate::typer::context::FileContext;
-    use crate::typer::typ_file;
+    use crate::minic_parse;
 
     #[test]
     fn display() {
-        let content = read_to_string("test.c").unwrap();
-        let (_, file) = parse_file(Input::new(&content)).unwrap();
-        let typed = typ_file(Rc::new(FileContext::default()), &file).unwrap();
-        let rtl = rtl_file(&typed).unwrap();
+        let file = read_to_string("test.c").expect("Failed to read file");
+        let rtl = minic_parse(&file)
+            .expect("Failed to parse file")
+            .minic_typ()
+            .expect("Failed to typ file")
+            .minic_rtl()
+            .expect("Failed to rtl file");
 
         println!("{}", rtl);
     }
