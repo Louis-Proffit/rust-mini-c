@@ -5,6 +5,7 @@ extern crate logos_nom_bridge;
 
 use std::rc::Rc;
 use crate::common::Stdout;
+use crate::ertl::{ertl_file, ErtlResult};
 use crate::parser::{parse_file, ParserResult};
 use crate::rtl::{rtl_file, RtlResult};
 use crate::rtl::interpreter::{interp_rtl_file, RtlInterpreterResult};
@@ -16,6 +17,7 @@ pub mod common;
 mod parser;
 mod typer;
 mod rtl;
+mod ertl;
 
 pub fn minic_parse(input: &str) -> ParserResult {
     parse_file(input)
@@ -38,8 +40,8 @@ impl<'a> typer::structure::File<'a> {
 }
 
 impl rtl::structure::File<'_> {
-    pub fn minic_ertl(&self) {
-        todo!()
+    pub fn minic_ertl(&self) -> ErtlResult<ertl::structure::File> {
+        ertl_file(self)
     }
 
     pub fn minic_interp(&self) -> RtlInterpreterResult<Stdout> {

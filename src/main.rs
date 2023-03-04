@@ -26,15 +26,21 @@ fn main() {
                 .long("debug-rtl")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new("debug-ertl")
+                .long("debug-ertl")
+                .action(ArgAction::SetTrue),
+        )
         .get_matches();
 
     let file_path = matches.get_one::<String>("file").expect("required");
     let debug_parser = matches.get_flag("debug-parser");
     let debug_typer = matches.get_flag("debug-typer");
     let debug_rtl = matches.get_flag("debug-rtl");
+    let debug_ertl = matches.get_flag("debug-ertl");
 
     let content = read_to_string(file_path).expect("Failed to read file");
-    let stdout = minic_parse(&content)
+    let _ = minic_parse(&content)
         .map(|file| {
             if debug_parser {
                 println!("Parsed file : {:?}", file);
@@ -58,9 +64,13 @@ fn main() {
             file
         })
         .expect("Failed to rtl file")
-        .minic_interp()
-        .expect("Failed to interp RTL");
+        .minic_ertl()
+        .map(|file| {
+            if debug_ertl {
+                println!("ERTL file : {}", file)
+            }
+        }).expect("Failed to ertl file");
 
     println!("------------------------------------");
-    println!("{}", stdout)
+    // println!("{}", stdout)
 }
