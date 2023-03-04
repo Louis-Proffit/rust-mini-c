@@ -5,29 +5,28 @@ pub mod register;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
-use derive_getters::Getters;
-use crate::common::Value;
+use crate::common::{Ident, Value};
 use crate::rtl::structure::graph::{Graph, DisplayableGraph, DisplayableVar};
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 
-#[derive(new, Getters, Debug)]
-pub struct File {
-    funs: HashMap<String, Fun>,
+#[derive(new, Debug)]
+pub struct File<'a> {
+    pub funs: HashMap<Ident<'a>, Fun<'a>>,
 }
 
-#[derive(new, Getters, Debug)]
-pub struct Fun {
-    name: String,
-    result: Register,
-    arguments:Vec<Register>,
-    entry: Label,
-    exit: Label,
-    graph: Graph,
+#[derive(new, Debug)]
+pub struct Fun<'a> {
+    pub name: Ident<'a>,
+    pub result: Register,
+    pub arguments: Vec<Register>,
+    pub entry: Label,
+    pub exit: Label,
+    pub graph: Graph<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub enum Instr {
+pub enum Instr<'a> {
     EConst(Value, Register, Label),
     ELoad(Register, usize, Register, Label),
     EStore(Register, Register, usize, Label),
@@ -35,7 +34,7 @@ pub enum Instr {
     EMBinop(Mbinop, Register, Register, Label),
     EMuBranch(MuBranch, Register, Label, Label),
     EMbBranch(MbBranch, Register, Register, Label, Label),
-    ECall(Register, String, Vec<Register>, Label),
+    ECall(Register, Ident<'a>, Vec<Register>, Label),
     EGoto(Label),
 }
 
@@ -75,11 +74,7 @@ pub enum MbBranch {
     MJle,
 }
 
-#[derive(Eq, Hash, PartialEq, Debug, Clone)]
-pub enum BlockIdent {
-    Arg(usize, String),
-    Local(u8, String),
-}
+pub type BlockIdent<'a> = crate::typer::structure::BlockIdent<'a>;
 
 pub trait Fresh {
     type Item;
@@ -91,16 +86,17 @@ struct Registers<'a>(&'a Vec<Register>);
 
 struct DisplayableVars(Vec<DisplayableVar>);
 
-impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent {
+/*
+impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent<'a> {
     fn from(value: crate::typer::structure::BlockIdent<'a>) -> Self {
         match value {
             crate::typer::structure::BlockIdent::Arg(x, y) => BlockIdent::Arg(x, String::from(y)),
             crate::typer::structure::BlockIdent::Local(x, y) => BlockIdent::Local(x, String::from(y))
         }
     }
-}
+}*/
 
-impl Display for File {
+impl Display for File<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== RTL ==================================================")?;
         for (_, fun) in &self.funs {
@@ -110,7 +106,7 @@ impl Display for File {
     }
 }
 
-impl Display for Fun {
+impl Display for Fun<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {}({})", self.result, self.name, DisplayableVars(self.graph.arguments()))?;
         writeln!(f, "\tentry : {}", self.entry)?;
@@ -128,16 +124,16 @@ impl Display for Fun {
     }
 }
 
-impl Display for Instr {
+impl Display for Instr<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Instr::EConst(c, r, l) => write!(f, "mov ${} {} --> {}", c, r, l),
-            Instr::ELoad(_, _, _, _) => write!(f, "load TODO"),
-            Instr::EStore(_, _, _, _) => write!(f, "store TODO"),
+            Instr::ELoad(address, offset, dest, l) => write!(f, "load {}({}) to {} --> {}", address, offset, dest, l),
+            Instr::EStore(address, value, offset, l) => write!(f, "store {} in {}({}) --> {}", value, address, offset, l),
             Instr::EMUnop(op, r, l) => write!(f, "{} {} --> {}", op, r, l),
             Instr::EMBinop(op, r1, r2, l) => write!(f, "{} {} {} --> {}", op, r1, r2, l),
             Instr::EMuBranch(op, reg, lbl1, lbl2) => write!(f, "{} {} --> {},{}", op, reg, lbl1, lbl2),
-            Instr::EMbBranch(_, _, _, _, _) => write!(f, "bbranch TODO"),
+            Instr::EMbBranch(op, r1, r2, l1, l2) => write!(f, "bbranch {} : {} {} --> {},{}", op, r1, r2, l1, l2),
             Instr::ECall(reg, name, args, l) => write!(f, "call {} {}({}) --> {}", reg, name, Registers(args), l),
             Instr::EGoto(l) => write!(f, "goto {}", l),
         }
@@ -168,6 +164,15 @@ impl Display for Mbinop {
             Mbinop::Msetle => write!(f, "setle"),
             Mbinop::Msetg => write!(f, "setg"),
             Mbinop::Msetge => write!(f, "setge"),
+        }
+    }
+}
+
+impl Display for MbBranch {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MbBranch::MJl => write!(f, "jl"),
+            MbBranch::MJle => write!(f, "jle")
         }
     }
 }

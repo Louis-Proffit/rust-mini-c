@@ -10,7 +10,7 @@ nom = "7.1.3"
 logos = "0.12.1"
 parse_int = { version = "0.5", features = ["implicit-octal"] }
 logos-nom-bridge = "0.1.0"
+itertools = "0.10.5"
+clap = "4.1.8"
 derive-getters = "0.2.0"
 derive-new = "0.5"
-itertools = "0.10.5"
-

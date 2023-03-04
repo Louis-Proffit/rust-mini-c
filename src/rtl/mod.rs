@@ -10,20 +10,20 @@ use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::Register;
 use crate::typer::structure as typer;
 
-pub type RtlResult<T> = Result<T, RtlError>;
+pub type RtlResult<'a, T> = Result<T, RtlError<'a>>;
 
-pub fn rtl_file(file: &typer::File) -> RtlResult<File> {
+pub fn rtl_file<'a>(file: &typer::File<'a>) -> RtlResult<'a, File<'a>> {
     let mut funs = HashMap::new();
 
     for (name, fun) in file.funs() {
-        funs.insert(String::from(*name), rtl_fun(fun)?);
+        funs.insert(name.clone(), rtl_fun(fun)?);
     }
 
     Ok(File::new(funs))
 }
 
-fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
-    let name = String::from(fun.signature().name().clone());
+fn rtl_fun<'a>(fun: &typer::Fun<'a>) -> RtlResult<'a, Fun<'a>> {
+    let name = fun.signature().name().clone();
     let result = Register::fresh();
 
     let mut arguments = vec![];
@@ -51,11 +51,11 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
         }
     }
 
-    let graph = Graph::new(vars);
+    let mut graph = Graph::new(vars);
 
     let exit = Label::fresh();
     let entry = rtl_block(
-        &graph,
+        &mut graph,
         &result,
         &exit,
         &exit,
@@ -72,7 +72,7 @@ fn rtl_fun(fun: &typer::Fun) -> RtlResult<Fun> {
     ))
 }
 
-fn rtl_block(graph: &Graph, retr: &Register, retl: &Label, destl: &Label, block: &typer::Block) -> RtlResult<Label> {
+fn rtl_block<'a>(graph: &mut Graph<'a>, retr: &Register, retl: &Label, destl: &Label, block: &typer::Block<'a>) -> RtlResult<'a, Label> {
     let mut dlabel = destl.clone();
 
     for stmt in block.stmts().iter().rev() {
@@ -82,7 +82,7 @@ fn rtl_block(graph: &Graph, retr: &Register, retl: &Label, destl: &Label, block:
     Ok(dlabel.clone())
 }
 
-fn rtl_stmt(graph: &Graph, retr: &Register, retl: &Label, destl: &Label, stmt: &typer::Stmt) -> RtlResult<Label> {
+fn rtl_stmt<'a>(graph: &mut Graph<'a>, retr: &Register, retl: &Label, destl: &Label, stmt: &typer::Stmt<'a>) -> RtlResult<'a, Label> {
     match stmt {
         typer::Stmt::SSkip => Ok(destl.clone()),
         typer::Stmt::SExpr(expr) => rtl_expr(
@@ -121,7 +121,7 @@ fn rtl_stmt(graph: &Graph, retr: &Register, retl: &Label, destl: &Label, stmt: &
     }
 }
 
-fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) -> RtlResult<Label> {
+fn rtl_expr<'a>(graph: &mut Graph<'a>, destr: &Register, destl: &Label, expr: &typer::Expr<'a>) -> RtlResult<'a, Label> {
     match expr.node() {
         typer::ExprNode::EConst(x) => Ok(
             graph.insert(Instr::EConst(x.clone(), destr.clone(), destl.clone()))
@@ -129,8 +129,7 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
         typer::ExprNode::EAccessLocal(var) => {
             let var = var.clone().into();
             let register = graph
-                .vars()
-                .borrow()
+                .vars
                 .get(&var)
                 .ok_or(RtlError::VarNotFound(var))?
                 .clone();
@@ -146,16 +145,15 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
             rtl_expr(graph, &expr_reg, &field_lbl, expr)
         }
         typer::ExprNode::EAssignLocal(var, expr) => {
-            let expr_reg = graph.vars().borrow().get(&var.clone().into()).expect("Register not found").clone();
+            let expr_reg = graph.vars.get(&var.clone().into()).expect("Register not found").clone();
             let mov_lbl = graph.insert(Instr::EMBinop(Mbinop::MMov, expr_reg.clone(), destr.clone(), destl.clone()));
             rtl_expr(graph, &expr_reg, &mov_lbl, expr)
         }
         typer::ExprNode::EAssignField(expr, field, value) => {
-            let value_reg = Register::fresh();
             let expr_reg = Register::fresh();
-            let store_lbl = graph.insert(Instr::ELoad(expr_reg.clone(), field.c_offset(), value_reg.clone(), destl.clone()));
+            let store_lbl = graph.insert(Instr::EStore(expr_reg.clone(), destr.clone(), field.c_offset(), destl.clone()));
             let expr_lbl = rtl_expr(graph, &expr_reg, &store_lbl, expr)?;
-            rtl_expr(graph, &value_reg, &expr_lbl, value)
+            rtl_expr(graph, &destr, &expr_lbl, value)
         }
         typer::ExprNode::EUnop(unop, expr) => {
             match unop {
@@ -190,10 +188,10 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
                         typer::Binop::BDiv => Mbinop::MDiv,
                         typer::Binop::BEq => Mbinop::MSete,
                         typer::Binop::BNeq => Mbinop::MSetne,
-                        typer::Binop::BLt => Mbinop::Msetge,
-                        typer::Binop::BGt => Mbinop::Msetle,
-                        typer::Binop::BGe => Mbinop::Msetl,
-                        typer::Binop::BLe => Mbinop::Msetg,
+                        typer::Binop::BLt => Mbinop::Msetl,
+                        typer::Binop::BGt => Mbinop::Msetg,
+                        typer::Binop::BGe => Mbinop::Msetge,
+                        typer::Binop::BLe => Mbinop::Msetle,
                         _ => unreachable!()
                     };
                     let reg_2 = Register::fresh();
@@ -238,7 +236,7 @@ fn rtl_expr(graph: &Graph, destr: &Register, destl: &Label, expr: &typer::Expr) 
 
             graph.insert_with_label(eval_label.clone(), Instr::ECall(
                 destr.clone(),
-                String::from(signature.name().clone()),
+                signature.name().clone(),
                 reverse_args,
                 destl.clone(),
             ));

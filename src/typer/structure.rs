@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
-use crate::common::{Value, Ident};
+use crate::common::{Value, Ident, MALLOC, PUTCHAR, MAIN};
 
 pub type StructSize = Value;
 pub type Unop = crate::parser::structure::Unop;
@@ -127,19 +127,16 @@ impl PartialEq<Self> for Struct<'_> {
 }
 
 impl Signature<'_> {
-    pub const MAIN_NAME: &'static str = "main";
-    pub const PUTCHAR_NAME: &'static str = "putchar";
-    pub const MALLOC_NAME: &'static str = "malloc";
 
     pub fn main<'a>() -> Signature<'a> {
-        Signature::new(Signature::MAIN_NAME, Typ::TInt, vec![])
+        Signature::new(MAIN, Typ::TInt, vec![])
     }
 
     pub fn putchar<'a>() -> Signature<'a> {
-        Signature::new(Signature::PUTCHAR_NAME, Typ::TInt, vec![Formal::new(BlockIdent::Arg(0, "c"), Typ::TInt)])
+        Signature::new(PUTCHAR, Typ::TInt, vec![Formal::new(BlockIdent::Arg(0, "c"), Typ::TInt)])
     }
 
     pub fn malloc<'a>() -> Signature<'a> {
-        Signature::new(Signature::MALLOC_NAME, Typ::TVoidStar, vec![Formal::new(BlockIdent::Arg(0, "n"), Typ::TInt)])
+        Signature::new(MALLOC, Typ::TVoidStar, vec![Formal::new(BlockIdent::Arg(0, "n"), Typ::TInt)])
     }
 }

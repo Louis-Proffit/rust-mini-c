@@ -3,13 +3,13 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use crate::rtl::structure::Fresh;
 
-static COUNTER: Mutex<u32> = Mutex::new(1);
+static COUNTER: Mutex<u32> = Mutex::new(0);
 
 pub type Label = Rc<_Label>;
 
 #[derive(Eq, PartialEq, Hash, Debug)]
 pub struct _Label {
-    name: String,
+    index: u32,
 }
 
 impl Fresh for Label {
@@ -21,12 +21,12 @@ impl Fresh for Label {
 
         *counter += 1;
 
-        Rc::new(_Label { name: format!("L{local_counter}") })
+        Rc::new(_Label { index: local_counter })
     }
 }
 
 impl Display for _Label {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "L{}", self.index)
     }
 }

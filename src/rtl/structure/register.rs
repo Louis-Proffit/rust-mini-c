@@ -9,7 +9,7 @@ pub type Register = Rc<_Register>;
 
 #[derive(Eq, PartialEq, Hash, Debug)]
 pub struct _Register {
-    name: String,
+    index: u32,
 }
 
 impl Fresh for Register {
@@ -21,12 +21,12 @@ impl Fresh for Register {
 
         *counter += 1;
 
-        Rc::new(_Register { name: format!("#{local_counter}") })
+        Rc::new(_Register { index: local_counter })
     }
 }
 
 impl Display for _Register {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "#{}", self.index)
     }
 }

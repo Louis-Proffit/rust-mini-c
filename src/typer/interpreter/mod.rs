@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::common::bool::{Bool, ToCBool};
-use crate::common::{Ident, Stdout};
+use crate::common::{Ident, MALLOC, PUTCHAR, Stdout};
 use crate::typer::interpreter::context::{Context, MemoryVar, TyperInterpreterFun};
 use crate::typer::interpreter::defaults::{Malloc, Putchar};
 use crate::typer::interpreter::error::TypInterpreterError;
@@ -27,8 +27,8 @@ pub fn interp_typed_file<'a>(file: &'a File<'a>) -> TyperInterpreterResult<Stdou
         functions.insert(name.clone(), Box::new(fun));
     }
 
-    functions.insert("putchar", Box::new(Putchar()));
-    functions.insert("malloc", Box::new(Malloc()));
+    functions.insert(PUTCHAR, Box::new(Putchar()));
+    functions.insert(MALLOC, Box::new(Malloc()));
 
     let functions = Rc::new(functions);
 
@@ -39,7 +39,7 @@ pub fn interp_typed_file<'a>(file: &'a File<'a>) -> TyperInterpreterResult<Stdou
         stdout.clone(),
     );
 
-    let _ = functions.get("main").expect("No main function").call(&mut context)?;
+    functions.get("main").expect("No main function").call(&mut context)?;
 
     let output = stdout.borrow().clone();
     Ok(output)

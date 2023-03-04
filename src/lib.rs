@@ -37,7 +37,7 @@ impl<'a> typer::structure::File<'a> {
     }
 }
 
-impl rtl::structure::File {
+impl rtl::structure::File<'_> {
     pub fn minic_ertl(&self) {
         todo!()
     }
