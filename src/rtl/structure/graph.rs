@@ -46,20 +46,6 @@ impl<'a> Graph<'a> {
         locals
     }
 
-    pub fn arguments(&self) -> Vec<DisplayableVar> {
-        let mut args = vec![];
-        for (ident, reg) in self.vars.iter() {
-            match ident {
-                BlockIdent::Arg(_, ident) => {
-                    args.push(DisplayableVar::new(String::from(ident.clone()), reg.clone()))
-                }
-                BlockIdent::Local(_, _) => {}
-            }
-        }
-
-        args
-    }
-
     pub fn insert_with_label(&mut self, label: Label, instr: Instr<'a>) {
         self.instrs.insert(label.clone(), instr);
     }

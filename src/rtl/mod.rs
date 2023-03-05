@@ -27,26 +27,29 @@ fn rtl_fun<'a>(fun: &typer::Fun<'a>) -> RtlResult<'a, Fun<'a>> {
     let result = Register::fresh();
 
     let mut arguments = vec![];
+    let mut locals = HashMap::new();
     let mut vars = HashMap::new();
 
     for argument in fun.signature().args() {
         let register = Register::fresh();
         arguments.push(register.clone());
-        vars.insert(argument.name().clone().into(), register);
+        let argument_name:  BlockIdent = argument.name().clone().into();
+        match vars.insert(argument_name.clone(), register) {
+            None => {}
+            Some(_) => {
+                return Err(RtlError::DuplicateBlockIdent(argument_name));
+            }
+        }
     }
 
     for local in fun.locals() {
+        let local:BlockIdent = local.clone().into();
         let register = Register::fresh();
-
-        let local: BlockIdent = local.clone().into();
-
-        match local {
-            BlockIdent::Arg(_, _) => {}
-            BlockIdent::Local(_, _) => match vars.insert(local.clone(), register) {
-                None => {}
-                Some(_) => {
-                    return Err(RtlError::DuplicateBlockIdent(local.clone()));
-                }
+        locals.insert(local.clone(), register.clone());
+        match vars.insert(local.clone(), register) {
+            None => {}
+            Some(_) => {
+                return Err(RtlError::DuplicateBlockIdent(local.clone()));
             }
         }
     }
@@ -66,6 +69,7 @@ fn rtl_fun<'a>(fun: &typer::Fun<'a>) -> RtlResult<'a, Fun<'a>> {
         name,
         result,
         arguments,
+        locals,
         entry,
         exit,
         graph,
@@ -243,26 +247,6 @@ fn rtl_expr<'a>(graph: &mut Graph<'a>, destr: &Register, destl: &Label, expr: &t
 
             Ok(arg_label)
         }
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use std::fs::read_to_string;
-    use crate::minic_parse;
-
-    #[test]
-    fn display() {
-        let file = read_to_string("test.c").expect("Failed to read file");
-        let rtl = minic_parse(&file)
-            .expect("Failed to parse file")
-            .minic_typ()
-            .expect("Failed to typ file")
-            .minic_rtl()
-            .expect("Failed to rtl file");
-
-        println!("{}", rtl);
     }
 }
 

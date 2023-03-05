@@ -18,6 +18,7 @@ mod parser;
 mod typer;
 mod rtl;
 mod ertl;
+pub mod utils;
 
 pub fn minic_parse(input: &str) -> ParserResult {
     parse_file(input)

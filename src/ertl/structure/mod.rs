@@ -6,6 +6,7 @@ use derive_new::new;
 use crate::common::{Ident, Value};
 use crate::ertl::structure::register::Register;
 use crate::rtl::structure::Fresh;
+use crate::utils::DisplayableSet;
 
 pub type Label = crate::rtl::structure::label::Label;
 pub type Munop = crate::rtl::structure::Munop;
@@ -33,7 +34,7 @@ pub enum Instr<'a> {
 
 #[derive(new, Debug)]
 pub struct Graph<'a> {
-    instrs: HashMap<Label, Instr<'a>>,
+    pub instrs: HashMap<Label, Instr<'a>>,
 }
 
 #[derive(new, Debug)]
@@ -82,7 +83,7 @@ impl Display for Fun<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}({})", self.name, self.argument_count)?;
         writeln!(f, "\tentry: {}", self.entry)?;
-        writeln!(f, "\tlocals: TODO")?;
+        writeln!(f, "\tlocals: {}", DisplayableSet(&self.locals))?;
         writeln!(f, "{}", DisplayableGraph::new(&self.body, &self.entry))
     }
 }
@@ -131,19 +132,19 @@ impl Display for Instr<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Instr::EConst(c, r, l) => write!(f, "mov ${} {} --> {}", c, r, l),
-            Instr::ELoad(_, _, _, _) => write!(f, ""),
-            Instr::EStore(_, _, _, _) => write!(f, ""),
-            Instr::EMUnop(_, _, _) => write!(f, ""),
-            Instr::EMBinop(_, _, _, _) => write!(f, ""),
-            Instr::EMuBranch(_, _, _, _) => write!(f, ""),
-            Instr::EMbBranch(_, _, _, _, _) => write!(f, ""),
-            Instr::ECall(_, _, _) => write!(f, ""),
-            Instr::EGoto(_) => write!(f, ""),
-            Instr::EAllocFrame(_) => write!(f, ""),
-            Instr::EDeleteFrame(_) => write!(f, ""),
-            Instr::EGetParam(_, _, _) => write!(f, ""),
-            Instr::EPushParam(_, _) => write!(f, ""),
-            Instr::EReturn => write!(f, "")
+            Instr::ELoad(a, o, r, l) => write!(f, "load {}({}) in {} --> {}", a, o, r, l),
+            Instr::EStore(a, v, o, l) => write!(f, "store {} in {}({}) --> {}", v, a, o, l),
+            Instr::EMUnop(op, r, l) => write!(f, "{} {} --> {}", op, r, l),
+            Instr::EMBinop(op, r1, r2, l) => write!(f, "{} {} {} --> {}", op, r1, r2, l),
+            Instr::EMuBranch(op, r, l1, l2) => write!(f, "{} {} --> {}, {}", op, r, l1, l2),
+            Instr::EMbBranch(op, r1, r2, l1, l2) => write!(f, "{} {} {} --> {}, {}", op, r1, r2, l1, l2),
+            Instr::ECall(name, args, l) => write!(f, "call {}({}) --> {}", name, args, l),
+            Instr::EGoto(l) => write!(f, "goto {}", l),
+            Instr::EAllocFrame(l) => write!(f, "alloc_frame --> {}", l),
+            Instr::EDeleteFrame(l) => write!(f, "delete_frame --> {}", l),
+            Instr::EGetParam(o, r, l) => write!(f, "{} {} --> {}", o, r, l),
+            Instr::EPushParam(r, l) => write!(f, "push {} --> {}", r, l),
+            Instr::EReturn => write!(f, "return")
         }
     }
 }

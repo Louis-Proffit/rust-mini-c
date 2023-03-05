@@ -1,5 +1,6 @@
 pub mod structure;
 pub mod error;
+pub mod liveness;
 
 use std::collections::{HashMap, HashSet};
 use itertools::enumerate;
@@ -25,7 +26,7 @@ pub fn ertl_file<'a>(file: &rtl::File<'a>) -> ErtlResult<File<'a>> {
 fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
     let mut body = Graph::new(HashMap::new());
 
-    let locals = HashSet::new();
+    let locals = HashSet::from_iter(fun.locals.values().map(|r| r.clone().into()));
 
     for (label, instr) in &fun.graph.instrs {
         ertl_instr(&mut body, label, instr)?;
@@ -49,11 +50,9 @@ fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
     let mut fetch_arg_lbl = (&fun.entry).clone();
 
     let args_count = fun.arguments.len() as u8;
-    // let args_on_stack = if args_count <= 6 { 0 } else { args_count - 6 };
-    // let args_in_registers = args_count - args_on_stack;
 
     for (index, arg_reg) in enumerate(&fun.arguments).rev() {
-        if index > 6 {
+        if index >= 6 {
             fetch_arg_lbl = body.insert(Instr::EGetParam((8 * (index - 6)) as u8, arg_reg.clone().into(), fetch_arg_lbl.clone()));
         } else {
             fetch_arg_lbl = body.insert(Instr::EMBinop(Mbinop::MMov, PARAMETERS[index].clone(), arg_reg.clone().into(), fetch_arg_lbl));
@@ -105,12 +104,13 @@ fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) 
                 let mut next_arg_label = call_lbl;
 
                 for (index, arg) in enumerate(args).rev() {
-                    if index > 6 {
+                    if index >= 6 {
                         next_arg_label = graph.insert(Instr::EPushParam(arg.clone().into(), next_arg_label.clone()));
                     } else if index > 0 {
                         next_arg_label = graph.insert(Instr::EMBinop(Mbinop::MMov, arg.clone().into(), PARAMETERS[index].clone(), next_arg_label.clone()));
                     } else {
                         graph.insert_at_label(label, Instr::EMBinop(Mbinop::MMov, arg.clone().into(), PARAMETERS[0].clone(), next_arg_label.clone()));
+                        return Ok(());
                     }
                 }
             }

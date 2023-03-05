@@ -20,6 +20,7 @@ pub struct Fun<'a> {
     pub name: Ident<'a>,
     pub result: Register,
     pub arguments: Vec<Register>,
+    pub locals: HashMap<BlockIdent<'a>, Register>,
     pub entry: Label,
     pub exit: Label,
     pub graph: Graph<'a>,
@@ -86,16 +87,6 @@ struct Registers<'a>(&'a Vec<Register>);
 
 struct DisplayableVars(Vec<DisplayableVar>);
 
-/*
-impl<'a> From<crate::typer::structure::BlockIdent<'a>> for BlockIdent<'a> {
-    fn from(value: crate::typer::structure::BlockIdent<'a>) -> Self {
-        match value {
-            crate::typer::structure::BlockIdent::Arg(x, y) => BlockIdent::Arg(x, String::from(y)),
-            crate::typer::structure::BlockIdent::Local(x, y) => BlockIdent::Local(x, String::from(y))
-        }
-    }
-}*/
-
 impl Display for File<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== RTL ==================================================")?;
@@ -108,7 +99,7 @@ impl Display for File<'_> {
 
 impl Display for Fun<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{} {}({})", self.result, self.name, DisplayableVars(self.graph.arguments()))?;
+        writeln!(f, "{} {}({})", self.result, self.name, Registers(&self.arguments))?;
         writeln!(f, "\tentry : {}", self.entry)?;
         writeln!(f, "\texit : {}", self.exit)?;
         writeln!(f, "\tlocals: {}", DisplayableVars(self.graph.locals()))?;
