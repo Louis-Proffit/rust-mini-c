@@ -1,5 +1,7 @@
 use std::fs::read_to_string;
 use clap::{Arg, ArgAction, Command};
+use rust_mini_c::ertl::liveness::liveness_fun;
+use rust_mini_c::ertl::liveness::structure::DisplayableLivenessGraph;
 use rust_mini_c::minic_parse;
 
 fn main() {
@@ -31,6 +33,11 @@ fn main() {
                 .long("debug-ertl")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new("debug-liveness")
+                .long("debug-liveness")
+                .action(ArgAction::SetTrue),
+        )
         .get_matches();
 
     let file_path = matches.get_one::<String>("file").expect("required");
@@ -38,9 +45,10 @@ fn main() {
     let debug_typer = matches.get_flag("debug-typer");
     let debug_rtl = matches.get_flag("debug-rtl");
     let debug_ertl = matches.get_flag("debug-ertl");
+    let debug_liveness = matches.get_flag("debug-liveness");
 
     let content = read_to_string(file_path).expect("Failed to read file");
-    let _ = minic_parse(&content)
+    let _file = minic_parse(&content)
         .map(|file| {
             if debug_parser {
                 println!("Parsed file : {:?}", file);
@@ -69,6 +77,15 @@ fn main() {
             if debug_ertl {
                 println!("ERTL file : {}", file)
             }
+
+            if debug_liveness {
+                for (name, fun) in &file.funs {
+                    println!("--------Liveness ---------------------------");
+                    let graph = liveness_fun(&fun.body).expect("Liveness failed");
+                    println!("{} :\n {}", name, DisplayableLivenessGraph::new(&graph, &fun.entry))
+                }
+            }
+            file
         }).expect("Failed to ertl file");
 
     println!("------------------------------------");

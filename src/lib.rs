@@ -14,10 +14,10 @@ use crate::typer::context::FileContext;
 use crate::typer::interpreter::{interp_typed_file, TyperInterpreterResult};
 
 pub mod common;
-mod parser;
-mod typer;
-mod rtl;
-mod ertl;
+pub mod parser;
+pub mod typer;
+pub mod rtl;
+pub mod ertl;
 pub mod utils;
 
 pub fn minic_parse(input: &str) -> ParserResult {
@@ -29,6 +29,7 @@ impl parser::structure::File<'_> {
         typ_file(Rc::new(FileContext::default()), self)
     }
 }
+
 
 impl<'a> typer::structure::File<'a> {
     pub fn minic_rtl(&self) -> RtlResult<rtl::structure::File> {

@@ -7,7 +7,7 @@ static COUNTER: Mutex<u32> = Mutex::new(0);
 
 pub type Label = Rc<_Label>;
 
-#[derive(Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
 pub struct _Label {
     index: u32,
 }

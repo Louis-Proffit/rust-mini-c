@@ -67,10 +67,9 @@ impl<'x> FunctionContext<'x> {
         typ: Typ<'a>,
         arguments: Vec<Formal<'a>>,
     ) -> FunctionContext<'a> {
-        let mut locals = HashSet::new();
         let block_counter = RefCell::new(FunctionContext::ARGUMENT_BLOCK_INDEX + 1);
         let arguments = RefCell::new(arguments);
-        let locals = RefCell::new(locals);
+        let locals = RefCell::new(HashSet::new());
 
         FunctionContext {
             context,
