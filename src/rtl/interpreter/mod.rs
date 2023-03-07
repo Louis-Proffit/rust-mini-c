@@ -14,7 +14,7 @@ use crate::rtl::interpreter::default::putchar::Putchar;
 use crate::rtl::interpreter::error::RtlInterpreterError;
 use crate::rtl::structure::{File, Fun, Instr, MbBranch, Mbinop, MuBranch, Munop};
 use crate::rtl::structure::label::Label;
-use crate::rtl::structure::register::Register;
+use crate::rtl::structure::register::PseudoRegister;
 
 pub type RtlInterpreterResult<T> = Result<T, RtlInterpreterError>;
 
@@ -44,8 +44,8 @@ pub fn interp_rtl_file<'a>(file: &'a File) -> RtlInterpreterResult<Stdout> {
 }
 
 pub trait RtlInterpFun<'a> {
-    fn fun_result(&self) -> &Register;
-    fn fun_arguments(&self) -> &Vec<Register>;
+    fn fun_result(&self) -> &PseudoRegister;
+    fn fun_arguments(&self) -> &Vec<PseudoRegister>;
     fn interp_fun(&self, context: &Context<'a>) -> RtlInterpreterResult<()>;
 }
 
@@ -192,11 +192,11 @@ impl<'a> Fun<'a> {
 }
 
 impl<'a> RtlInterpFun<'a> for &'a Fun<'a> {
-    fn fun_result(&self) -> &Register {
+    fn fun_result(&self) -> &PseudoRegister {
         return &self.result;
     }
 
-    fn fun_arguments(&self) -> &Vec<Register> {
+    fn fun_arguments(&self) -> &Vec<PseudoRegister> {
         &self.arguments
     }
 

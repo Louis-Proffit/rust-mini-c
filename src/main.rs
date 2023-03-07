@@ -1,7 +1,9 @@
 use std::fs::read_to_string;
 use clap::{Arg, ArgAction, Command};
-use rust_mini_c::ertl::liveness::liveness_fun;
-use rust_mini_c::ertl::liveness::structure::DisplayableLivenessGraph;
+use rust_mini_c::liveness::liveness_graph;
+use rust_mini_c::liveness::structure::DisplayableLivenessGraph;
+use rust_mini_c::coloring::color_graph;
+use rust_mini_c::interference::interference_graph;
 use rust_mini_c::minic_parse;
 
 fn main() {
@@ -38,6 +40,11 @@ fn main() {
                 .long("debug-liveness")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new("debug-ltl")
+                .long("debug-ltl")
+                .action(ArgAction::SetTrue),
+        )
         .get_matches();
 
     let file_path = matches.get_one::<String>("file").expect("required");
@@ -46,9 +53,10 @@ fn main() {
     let debug_rtl = matches.get_flag("debug-rtl");
     let debug_ertl = matches.get_flag("debug-ertl");
     let debug_liveness = matches.get_flag("debug-liveness");
+    let debug_ltl = matches.get_flag("debug-ltl");
 
     let content = read_to_string(file_path).expect("Failed to read file");
-    let _file = minic_parse(&content)
+    let _ = minic_parse(&content)
         .map(|file| {
             if debug_parser {
                 println!("Parsed file : {:?}", file);
@@ -79,15 +87,23 @@ fn main() {
             }
 
             if debug_liveness {
+                println!("--------Liveness---------------------------");
                 for (name, fun) in &file.funs {
-                    println!("--------Liveness ---------------------------");
-                    let graph = liveness_fun(&fun.body).expect("Liveness failed");
-                    println!("{} :\n {}", name, DisplayableLivenessGraph::new(&graph, &fun.entry))
+                    let graph = liveness_graph(&fun.body).expect("Liveness failed");
+                    println!("Liveness : \n{}:\n", name);
+                    println!("{}", DisplayableLivenessGraph::new(&graph, &fun.entry));
+                    let graph = interference_graph(&graph).expect("Interference failed");
+                    println!("{}", graph);
+                    let graph = color_graph(&graph).expect("Coloring failed");
+                    println!("{}", graph)
                 }
             }
             file
-        }).expect("Failed to ertl file");
-
-    println!("------------------------------------");
-    // println!("{}", stdout)
+        }).expect("Failed to ertl file")
+        .minic_ltl()
+        .map(|file| {
+            if debug_ltl {
+                println!("LTL file :\n {}", file)
+            }
+        });
 }

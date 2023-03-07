@@ -3,11 +3,11 @@ use std::fmt::{Display, Formatter};
 use derive_new::new;
 use crate::rtl::structure::{BlockIdent, Fresh, Instr};
 use crate::rtl::structure::label::Label;
-use crate::rtl::structure::register::Register;
+use crate::rtl::structure::register::PseudoRegister;
 
 #[derive(Debug)]
 pub struct Graph<'a> {
-    pub vars: HashMap<BlockIdent<'a>, Register>,
+    pub vars: HashMap<BlockIdent<'a>, PseudoRegister>,
     pub instrs: HashMap<Label, Instr<'a>>,
 }
 
@@ -21,11 +21,11 @@ pub struct DisplayableGraph<'a> {
 #[derive(new)]
 pub struct DisplayableVar {
     pub name: String,
-    pub register: Register,
+    pub register: PseudoRegister,
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(vars: HashMap<BlockIdent, Register>) -> Graph {
+    pub fn new(vars: HashMap<BlockIdent, PseudoRegister>) -> Graph {
         Graph {
             instrs: HashMap::new(),
             vars,

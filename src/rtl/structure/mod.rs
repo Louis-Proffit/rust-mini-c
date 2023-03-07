@@ -8,7 +8,7 @@ use derive_new::new;
 use crate::common::{Ident, Value};
 use crate::rtl::structure::graph::{Graph, DisplayableGraph};
 use crate::rtl::structure::label::Label;
-use crate::rtl::structure::register::Register;
+use crate::rtl::structure::register::PseudoRegister;
 use crate::utils::DisplayableVec;
 
 #[derive(new, Debug)]
@@ -19,9 +19,9 @@ pub struct File<'a> {
 #[derive(new, Debug)]
 pub struct Fun<'a> {
     pub name: Ident<'a>,
-    pub result: Register,
-    pub arguments: Vec<Register>,
-    pub locals: HashMap<BlockIdent<'a>, Register>,
+    pub result: PseudoRegister,
+    pub arguments: Vec<PseudoRegister>,
+    pub locals: HashMap<BlockIdent<'a>, PseudoRegister>,
     pub entry: Label,
     pub exit: Label,
     pub graph: Graph<'a>,
@@ -29,14 +29,14 @@ pub struct Fun<'a> {
 
 #[derive(Debug, Clone)]
 pub enum Instr<'a> {
-    EConst(Value, Register, Label),
-    ELoad(Register, usize, Register, Label),
-    EStore(Register, Register, usize, Label),
-    EMUnop(Munop, Register, Label),
-    EMBinop(Mbinop, Register, Register, Label),
-    EMuBranch(MuBranch, Register, Label, Label),
-    EMbBranch(MbBranch, Register, Register, Label, Label),
-    ECall(Register, Ident<'a>, Vec<Register>, Label),
+    EConst(Value, PseudoRegister, Label),
+    ELoad(PseudoRegister, usize, PseudoRegister, Label),
+    EStore(PseudoRegister, PseudoRegister, usize, Label),
+    EMUnop(Munop, PseudoRegister, Label),
+    EMBinop(Mbinop, PseudoRegister, PseudoRegister, Label),
+    EMuBranch(MuBranch, PseudoRegister, Label, Label),
+    EMbBranch(MbBranch, PseudoRegister, PseudoRegister, Label, Label),
+    ECall(PseudoRegister, Ident<'a>, Vec<PseudoRegister>, Label),
     EGoto(Label),
 }
 
@@ -47,7 +47,7 @@ pub enum Munop {
     Msetnei(Value),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Mbinop {
     MMov,
     MAdd,

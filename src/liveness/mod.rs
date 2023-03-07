@@ -1,15 +1,16 @@
+use std::collections::{BTreeSet, HashMap, HashSet};
+use crate::ertl::structure::{Graph, Instr, Label, Mbinop};
+use crate::ertl::structure::register::{CALLER_SAVED, PARAMETERS, PhysicalRegister, Register};
+use crate::liveness::error::LivenessError;
+use crate::liveness::structure::{LivenessGraph, LivenessInfo};
+
 pub mod structure;
 pub mod error;
 
-use std::collections::{BTreeSet, HashMap, HashSet};
-use crate::ertl::liveness::error::LivenessError;
-use crate::ertl::liveness::structure::{LivenessGraph, LivenessInfo};
-use crate::ertl::structure::{Graph, Instr, Label, Mbinop};
-use crate::ertl::structure::register::{CALLEE_SAVED, CALLER_SAVED, PARAMETERS, Register};
 
 pub type LivenessResult<T> = Result<T, LivenessError>;
 
-pub fn liveness_fun<'a>(graph: &'a Graph<'a>) -> LivenessResult<LivenessGraph<'a>> {
+pub fn liveness_graph<'a>(graph: &'a Graph<'a>) -> LivenessResult<LivenessGraph<'a>> {
     let mut succ_map = HashMap::new();
 
     for (label, instr) in &graph.instrs {
@@ -129,21 +130,34 @@ pub fn def_use(instr: &Instr) -> (Vec<Register>, Vec<Register>) {
         Instr::EMBinop(Mbinop::MMov, rs, rd, _)
         | Instr::ELoad(rs, _, rd, _) => (vec![rd.clone()], vec![rs.clone()]),
         Instr::EMBinop(Mbinop::MDiv, rs, rd, _) => {
-            assert_eq!(rd, &Register::Rax);
-            (vec![Register::Rax, Register::Rdx], vec![Register::Rax, Register::Rdx, rs.clone()])
+            assert_eq!(rd, &Register::Physical(PhysicalRegister::Rax));
+            (vec![Register::Physical(PhysicalRegister::Rax), Register::Physical(PhysicalRegister::Rdx)], vec![Register::Physical(PhysicalRegister::Rax), Register::Physical(PhysicalRegister::Rdx), rs.clone()])
         }
         Instr::EMBinop(_, rs, rd, _) => (vec![rd.clone()], vec![rs.clone(), rd.clone()]),
         Instr::EStore(r1, r2, _, _)
         | Instr::EMbBranch(_, r1, r2, _, _) => (vec![], vec![r1.clone(), r2.clone()]),
         Instr::ECall(_, n, _) => {
-            (Vec::from(CALLER_SAVED), Vec::from(PARAMETERS).drain(..(*n as usize)).collect())
+            let def = CALLER_SAVED.iter()
+                .map(|r| Register::Physical(r.clone()))
+                .collect();
+            let used = PARAMETERS
+                .iter()
+                .map(|r| Register::Physical(r.clone()))
+                .collect::<Vec<Register>>()
+                .drain(..(*n as usize))
+                .collect();
+            (def, used)
         }
         Instr::EGoto(_)
         | Instr::EAllocFrame(_)
         | Instr::EDeleteFrame(_) => (vec![], vec![]),
         Instr::EReturn => {
-            let mut used = vec![Register::Rax];
-            used.extend(CALLEE_SAVED);
+            let mut used = CALLER_SAVED
+                .into_iter()
+                .map(|r| { Register::Physical(r) })
+                .collect::<Vec<Register>>();
+
+            used.push(Register::Physical(PhysicalRegister::Rax));
             (vec![], used)
         }
     }

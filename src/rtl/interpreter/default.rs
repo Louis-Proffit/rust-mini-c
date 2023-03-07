@@ -4,27 +4,27 @@ pub mod malloc {
     use crate::rtl::interpreter::context::Context;
     use crate::rtl::interpreter::{RtlInterpFun, RtlInterpreterResult, Value};
     use crate::rtl::structure::Fresh;
-    use crate::rtl::structure::register::Register;
+    use crate::rtl::structure::register::PseudoRegister;
 
     static MALLOC_VALUE_INDEX: Mutex<Value> = Mutex::new(1);
 
     pub struct Malloc {
-        result: Register,
-        args: Vec<Register>,
+        result: PseudoRegister,
+        args: Vec<PseudoRegister>,
     }
 
     impl Malloc {
         pub fn new() -> Malloc {
-            Malloc { result: Register::fresh(), args: vec![Register::fresh()] }
+            Malloc { result: PseudoRegister::fresh(), args: vec![PseudoRegister::fresh()] }
         }
     }
 
     impl<'a> RtlInterpFun<'a> for Malloc {
-        fn fun_result(&self) -> &Register {
+        fn fun_result(&self) -> &PseudoRegister {
             &self.result
         }
 
-        fn fun_arguments(&self) -> &Vec<Register> {
+        fn fun_arguments(&self) -> &Vec<PseudoRegister> {
             &self.args
         }
 
@@ -51,25 +51,25 @@ pub mod putchar {
     use crate::rtl::interpreter::error::RtlInterpreterError;
     use crate::rtl::interpreter::{RtlInterpFun, RtlInterpreterResult};
     use crate::rtl::structure::Fresh;
-    use crate::rtl::structure::register::Register;
+    use crate::rtl::structure::register::PseudoRegister;
 
     pub struct Putchar {
-        result: Register,
-        args: Vec<Register>,
+        result: PseudoRegister,
+        args: Vec<PseudoRegister>,
     }
 
     impl Putchar {
         pub fn new() -> Putchar {
-            Putchar { result: Register::fresh(), args: vec![Register::fresh()] }
+            Putchar { result: PseudoRegister::fresh(), args: vec![PseudoRegister::fresh()] }
         }
     }
 
     impl<'a> RtlInterpFun<'a> for Putchar {
-        fn fun_result(&self) -> &Register {
+        fn fun_result(&self) -> &PseudoRegister {
             &self.result
         }
 
-        fn fun_arguments(&self) -> &Vec<Register> {
+        fn fun_arguments(&self) -> &Vec<PseudoRegister> {
             &self.args
         }
 

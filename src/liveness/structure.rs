@@ -11,13 +11,13 @@ pub struct LivenessGraph<'a> {
 
 #[derive(Debug, new)]
 pub struct LivenessInfo<'a> {
-    instr: &'a Instr<'a>,
-    succ: Vec<Label>,
-    pred: HashSet<Label>,
-    defs: Vec<Register>,
-    uses: Vec<Register>,
-    ins: HashSet<Register>,
-    outs: Vec<Register>,
+    pub instr: &'a Instr<'a>,
+    pub succ: Vec<Label>,
+    pub pred: HashSet<Label>,
+    pub defs: Vec<Register>,
+    pub uses: Vec<Register>,
+    pub ins: HashSet<Register>,
+    pub outs: Vec<Register>,
 }
 
 #[derive(new)]

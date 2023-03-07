@@ -5,15 +5,15 @@ use crate::rtl::structure::Fresh;
 
 static COUNTER: Mutex<u32> = Mutex::new(1);
 
-pub type Register = Rc<_Register>;
+pub type PseudoRegister = Rc<_PseudoRegister>;
 
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub struct _Register {
+#[derive(Eq, PartialEq, Hash, Debug,Ord, PartialOrd)]
+pub struct _PseudoRegister {
     index: u32,
 }
 
-impl Fresh for Register {
-    type Item = Register;
+impl Fresh for PseudoRegister {
+    type Item = PseudoRegister;
 
     fn fresh() -> Self::Item {
         let mut counter = COUNTER.lock().unwrap();
@@ -21,11 +21,11 @@ impl Fresh for Register {
 
         *counter += 1;
 
-        Rc::new(_Register { index: local_counter })
+        Rc::new(_PseudoRegister { index: local_counter })
     }
 }
 
-impl Display for _Register {
+impl Display for _PseudoRegister {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "#{}", self.index)
     }

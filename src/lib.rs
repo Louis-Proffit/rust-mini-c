@@ -6,6 +6,7 @@ extern crate logos_nom_bridge;
 use std::rc::Rc;
 use crate::common::Stdout;
 use crate::ertl::{ertl_file, ErtlResult};
+use crate::ltl::{ltl_file, LtlResult};
 use crate::parser::{parse_file, ParserResult};
 use crate::rtl::{rtl_file, RtlResult};
 use crate::rtl::interpreter::{interp_rtl_file, RtlInterpreterResult};
@@ -19,6 +20,10 @@ pub mod typer;
 pub mod rtl;
 pub mod ertl;
 pub mod utils;
+pub mod ltl;
+pub mod interference;
+pub mod liveness;
+pub mod coloring;
 
 pub fn minic_parse(input: &str) -> ParserResult {
     parse_file(input)
@@ -48,5 +53,11 @@ impl rtl::structure::File<'_> {
 
     pub fn minic_interp(&self) -> RtlInterpreterResult<Stdout> {
         interp_rtl_file(self)
+    }
+}
+
+impl ertl::structure::File<'_> {
+    pub fn minic_ltl(&self) -> LtlResult<ltl::structure::File> {
+        ltl_file(self)
     }
 }
