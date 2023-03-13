@@ -5,7 +5,7 @@ pub mod register;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
-use crate::common::{Ident, Value};
+use crate::common::{Ident, StackOffset, Value};
 use crate::rtl::structure::graph::{Graph, DisplayableGraph};
 use crate::rtl::structure::label::Label;
 use crate::rtl::structure::register::PseudoRegister;
@@ -30,8 +30,8 @@ pub struct Fun<'a> {
 #[derive(Debug, Clone)]
 pub enum Instr<'a> {
     EConst(Value, PseudoRegister, Label),
-    ELoad(PseudoRegister, usize, PseudoRegister, Label),
-    EStore(PseudoRegister, PseudoRegister, usize, Label),
+    ELoad(PseudoRegister, StackOffset, PseudoRegister, Label),
+    EStore(PseudoRegister, PseudoRegister, StackOffset, Label),
     EMUnop(Munop, PseudoRegister, Label),
     EMBinop(Mbinop, PseudoRegister, PseudoRegister, Label),
     EMuBranch(MuBranch, PseudoRegister, Label, Label),

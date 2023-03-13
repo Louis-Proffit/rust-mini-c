@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use derive_new::new;
-use crate::common::{Ident, Stdout, Value};
+use crate::common::{Ident, StackOffset, Stdout, Value};
 use crate::rtl::interpreter::{RtlInterpFun, RtlInterpreterResult};
 use crate::rtl::interpreter::error::RtlInterpreterError;
 use crate::rtl::structure::register::PseudoRegister;
@@ -15,7 +15,7 @@ pub struct Context<'a> {
     pub stdout: Rc<Stdout>,
     pub funs: Rc<HashMap<Ident<'a>, Rc<dyn RtlInterpFun<'a> + 'a>>>,
     pub regs: Rc<RefCell<HashMap<PseudoRegister, Value>>>,
-    pub memory: Rc<RefCell<HashMap<Value, HashMap<usize, Value>>>>,
+    pub memory: Rc<RefCell<HashMap<Value, HashMap<StackOffset, Value>>>>,
 }
 
 impl Context<'_> {
@@ -27,7 +27,7 @@ impl Context<'_> {
         *self.regs.borrow_mut().get(register).unwrap_or(&DEFAULT_REGISTER_VALUE)
     }
 
-    pub fn load(&self, register: &PseudoRegister, offset: &usize) -> RtlInterpreterResult<Value> {
+    pub fn load(&self, register: &PseudoRegister, offset: &StackOffset) -> RtlInterpreterResult<Value> {
         let address = self.get(register);
 
         Ok(*self.memory
@@ -38,7 +38,7 @@ impl Context<'_> {
             .unwrap_or(&DEFAULT_FIELD_VALUE))
     }
 
-    pub fn store(&self, register: &PseudoRegister, offset: &usize, value: &Value) -> RtlInterpreterResult<()> {
+    pub fn store(&self, register: &PseudoRegister, offset: &StackOffset, value: &Value) -> RtlInterpreterResult<()> {
         let address = self.get(register);
 
         self.memory

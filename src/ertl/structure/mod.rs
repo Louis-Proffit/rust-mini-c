@@ -3,7 +3,7 @@ pub mod register;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use derive_new::new;
-use crate::common::{Ident, Value};
+use crate::common::{Ident, StackOffset, Value};
 use crate::ertl::structure::register::Register;
 use crate::rtl::structure::Fresh;
 use crate::utils::DisplayableSet;
@@ -17,17 +17,17 @@ pub type MbBranch = crate::rtl::structure::MbBranch;
 #[derive(Debug)]
 pub enum Instr<'a> {
     EConst(Value, Register, Label),
-    ELoad(Register, usize, Register, Label),
-    EStore(Register, Register, usize, Label),
+    ELoad(Register, StackOffset, Register, Label),
+    EStore(Register, Register, StackOffset, Label),
     EMUnop(Munop, Register, Label),
     EMBinop(Mbinop, Register, Register, Label),
     EMuBranch(MuBranch, Register, Label, Label),
     EMbBranch(MbBranch, Register, Register, Label, Label),
-    ECall(Ident<'a>, u8, Label),
+    ECall(Ident<'a>, StackOffset, Label),
     EGoto(Label),
     EAllocFrame(Label),
     EDeleteFrame(Label),
-    EGetParam(u8, Register, Label),
+    EGetParam(StackOffset, Register, Label),
     EPushParam(Register, Label),
     EReturn,
 }
@@ -40,7 +40,7 @@ pub struct Graph<'a> {
 #[derive(new, Debug)]
 pub struct Fun<'a> {
     pub name: Ident<'a>,
-    pub argument_count: u8,
+    pub argument_count: StackOffset,
     pub locals: HashSet<Register>,
     pub entry: Label,
     pub body: Graph<'a>,

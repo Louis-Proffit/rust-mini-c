@@ -3,7 +3,7 @@ pub mod error;
 
 use std::collections::{HashMap, HashSet};
 use itertools::enumerate;
-use crate::common::Value;
+use crate::common::{StackOffset, Value};
 use crate::ertl::error::ErtlError;
 use crate::ertl::structure::{Graph, File, Fun, Instr, Label};
 use crate::ertl::structure::register::{CALLEE_SAVED, PARAMETERS, PhysicalRegister, Register, RESULT};
@@ -48,11 +48,11 @@ fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
 
     let mut fetch_arg_lbl = (&fun.entry).clone();
 
-    let args_count = fun.arguments.len() as u8;
+    let args_count = fun.arguments.len() as StackOffset;
 
     for (index, arg_reg) in enumerate(&fun.arguments).rev() {
         if index >= 6 {
-            fetch_arg_lbl = body.insert(Instr::EGetParam((8 * (index - 6)) as u8, arg_reg.clone().into(), fetch_arg_lbl.clone()));
+            fetch_arg_lbl = body.insert(Instr::EGetParam((8 * (index - 6)) as StackOffset, arg_reg.clone().into(), fetch_arg_lbl.clone()));
         } else {
             fetch_arg_lbl = body.insert(Instr::EMBinop(Mbinop::MMov, Register::Physical(PARAMETERS[index].clone()), arg_reg.clone().into(), fetch_arg_lbl));
         }
@@ -77,7 +77,7 @@ fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
 
 fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) -> ErtlResult<()> {
     match instr {
-        rtl::Instr::EConst(x, r, l) => graph.insert_at_label(label, Instr::EConst(x.clone().into(), r.clone().into(), l.clone())),
+        rtl::Instr::EConst(v, r, l) => graph.insert_at_label(label, Instr::EConst(v.clone(), r.clone().into(), l.clone())),
         rtl::Instr::ELoad(x, o, r, l) => graph.insert_at_label(label, Instr::ELoad(x.clone().into(), *o, r.clone().into(), l.clone())),
         rtl::Instr::EStore(x, r, o, l) => graph.insert_at_label(label, Instr::EStore(x.clone().into(), r.clone().into(), *o, l.clone())),
         rtl::Instr::EMUnop(op, r, l) => graph.insert_at_label(label, Instr::EMUnop(op.clone(), r.clone().into(), l.clone())),
@@ -90,7 +90,7 @@ fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) 
         rtl::Instr::EMuBranch(op, r, l1, l2) => graph.insert_at_label(label, Instr::EMuBranch(op.clone(), r.clone().into(), l1.clone(), l2.clone())),
         rtl::Instr::EMbBranch(op, r1, r2, l1, l2) => graph.insert_at_label(label, Instr::EMbBranch(op.clone(), r1.clone().into(), r2.clone().into(), l1.clone(), l2.clone())),
         rtl::Instr::ECall(r, name, args, l) => {
-            let args_count = args.len() as u8;
+            let args_count = args.len() as StackOffset;
             let args_on_stack = if args_count <= 6 { 0 } else { args_count - 6 };
             let args_in_registers = args_count - args_on_stack;
 

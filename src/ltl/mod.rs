@@ -7,13 +7,12 @@ use crate::coloring::color_graph;
 use crate::common::Value;
 use crate::ertl::structure as ertl;
 use crate::ertl::structure::{Label, Mbinop};
-use crate::ertl::structure::register::PhysicalRegister;
+use crate::ertl::structure::register::{PhysicalRegister, TMP_1};
 use crate::interference::interference_graph;
 use crate::liveness::liveness_graph;
 use crate::ltl::context::Context;
 use crate::ltl::error::LtlError;
 use crate::ltl::structure::{File, Fun, Graph, Instr, Operand};
-use crate::ltl::structure::Instr::EGoto;
 use crate::rtl::structure::Munop;
 
 
@@ -60,9 +59,38 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             );
             Ok(())
         }
-        ertl::Instr::ELoad(_, _, _, _) => todo!(),
-        ertl::Instr::EStore(_, _, _, _) => todo!(),
-        ertl::Instr::EMUnop(_, _, _) => todo!(),
+        ertl::Instr::ELoad(addr, o, dest, l) => {
+            match (context.color(addr)?, context.color(dest)?) {
+                (Operand::Reg(r1), Operand::Reg(r2)) => {
+                    context.insert_at_label(
+                        label.clone(),
+                        Instr::ELoad(r1, *o, r2, l.clone()),
+                    );
+                    Ok(())
+                }
+                _ => todo!()
+            }
+        }
+        ertl::Instr::EStore(value, addr, o, l) => {
+            match (context.color(value)?, context.color(addr)?) {
+                (Operand::Reg(r1), Operand::Reg(r2)) => {
+                    context.insert_at_label(
+                        label.clone(),
+                        Instr::EStore(r1, r2, *o, l.clone()),
+                    );
+                    Ok(())
+                }
+                _ => todo!()
+            }
+        }
+        ertl::Instr::EMUnop(op, r, l) => {
+            let color = context.color(r)?;
+            context.insert_at_label(
+                label.clone(),
+                Instr::EMunop(op.clone(), color, l.clone()),
+            );
+            Ok(())
+        }
         ertl::Instr::EMBinop(op, r1, r2, l) => {
             let color_1 = context.color(r1)?;
             let color_2 = context.color(r2)?;
@@ -79,9 +107,33 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             }
             Ok(())
         }
-        ertl::Instr::EMuBranch(_, _, _, _) => todo!(),
-        ertl::Instr::EMbBranch(_, _, _, _, _) => todo!(),
-        ertl::Instr::ECall(_, _, _) => todo!(),
+        ertl::Instr::EMuBranch(op, r, l1, l2) => {
+            context.insert_at_label(
+                label.clone(),
+                Instr::EMuBranch(op.clone(), context.color(r)?, l1.clone(), l2.clone()),
+            );
+            Ok(())
+        }
+        ertl::Instr::EMbBranch(op, r1, r2, l1, l2) => {
+            context.insert_at_label(
+                label.clone(),
+                Instr::EMbBranch(
+                    op.clone(),
+                    context.color(r1)?,
+                    context.color(r2)?,
+                    l1.clone(),
+                    l2.clone()),
+            );
+            Ok(())
+        }
+        ertl::Instr::ECall(name, _frame_size, l) => {
+            // TODO no frame size needed ?
+            context.insert_at_label(
+                label.clone(),
+                Instr::ECall(name.clone(), l.clone()),
+            );
+            Ok(())
+        }
         ertl::Instr::EGoto(l) => {
             context.insert_at_label(
                 label.clone(),
@@ -105,8 +157,8 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             } else {
                 context.insert_at_label(
                     label.clone(),
-                    EGoto(l.clone()),
-                )
+                    Instr::EGoto(l.clone()),
+                );
             }
             Ok(())
         }
@@ -122,17 +174,41 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             } else {
                 context.insert_at_label(
                     label.clone(),
-                    EGoto(l.clone()),
-                )
+                    Instr::EGoto(l.clone()),
+                );
             }
             Ok(())
         }
-        ertl::Instr::EGetParam(_, _, _) => todo!(),
+        ertl::Instr::EGetParam(index, dest, l) => {
+            let color = context.color(dest)?;
+            match color {
+                Operand::Reg(r) => {
+                    context.insert_at_label(
+                        label.clone(),
+                        Instr::ELoad(PhysicalRegister::Rbp, (index - 7) * 8 + 16, r, l.clone()),
+                    );
+                    Ok(())
+                }
+                Operand::Spilled(o) => {
+                    let tmp = TMP_1;
+                    context.insert_at_label(
+                        label.clone(),
+                        Instr::ELoad(PhysicalRegister::Rbp, (index - 7) * 8 + 16, tmp.clone(), l.clone()),
+                    );
+                    context.insert_at_label(
+                        label.clone(),
+                        Instr::EStore(tmp, PhysicalRegister::Rbp, o, l.clone()),
+                    );
+                    Ok(())
+                }
+            }
+        }
         ertl::Instr::EPushParam(r, l) => {
             context.insert_at_label(
                 label.clone(),
                 Instr::EPush(context.color(r)?, l.clone()),
-            )
+            );
+            Ok(())
         }
         ertl::Instr::EReturn => {
             context.insert_at_label(label.clone(), Instr::EReturn);

@@ -1,5 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use crate::coloring::structure::Coloring;
+use crate::common::StackOffset;
 use crate::ertl::structure::register::{ALLOCATABLE, PhysicalRegister, Register};
 use crate::interference::structure::InterferenceGraph;
 use crate::ltl::structure::Operand;
@@ -61,7 +62,7 @@ pub fn color_graph(graph: &InterferenceGraph) -> ColoringResult<Coloring> {
             }
         } else {
             let spilled = todo.pop_first().unwrap();
-            colors.insert(spilled, Operand::Spilled(count_on_stack));
+            colors.insert(spilled, Operand::Spilled(count_on_stack as StackOffset));
             count_on_stack += 1
         }
     }

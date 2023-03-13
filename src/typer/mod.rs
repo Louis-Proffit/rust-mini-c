@@ -14,7 +14,9 @@ use crate::typer::error::{DuplicateFieldName, IncompatibleTyp, TypError};
 
 pub type TypResult<'a, T> = Result<T, TypError<'a>>;
 
-pub fn typ_file<'a>(context: Rc<FileContext<'a>>, file: &'a parser::File<'a>) -> TypResult<'a, File<'a>> {
+pub fn typ_file<'a>(file: &'a parser::File<'a>) -> TypResult<'a, File<'a>> {
+    let context = Rc::new(FileContext::default());
+
     for structure in file.structs() {
         let name = structure.name();
 
@@ -78,7 +80,7 @@ fn typ_struct<'a>(context: Rc<FileContext<'a>>, structure: &'a parser::Struct<'a
             field_name.clone(),
             Rc::new(Field::new(
                 field_name,
-                index,
+                index as u8,
                 typ_typ(struct_context.clone(), field.typ())?.clone(),
             )),
         ) {

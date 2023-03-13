@@ -1,4 +1,5 @@
-use std::fs::read_to_string;
+use std::fs::{File, read_to_string};
+use std::io::Write;
 use clap::{Arg, ArgAction, Command};
 use rust_mini_c::liveness::liveness_graph;
 use rust_mini_c::liveness::structure::DisplayableLivenessGraph;
@@ -14,6 +15,11 @@ fn main() {
         .arg(
             Arg::new("file")
                 .required(true)
+        )
+        .arg(
+            Arg::new("output")
+                .short('o')
+                .long("output")
         )
         .arg(
             Arg::new("debug-parser")
@@ -54,6 +60,8 @@ fn main() {
     let debug_ertl = matches.get_flag("debug-ertl");
     let debug_liveness = matches.get_flag("debug-liveness");
     let debug_ltl = matches.get_flag("debug-ltl");
+
+    let output = matches.get_one::<String>("output").expect("required");
 
     let content = read_to_string(file_path).expect("Failed to read file");
     let _ = minic_parse(&content)
@@ -105,5 +113,11 @@ fn main() {
             if debug_ltl {
                 println!("LTL file :\n {}", file)
             }
+            file
+        }).expect("Failes to ltl file")
+        .minic_linearise()
+        .map(|file| {
+            let mut output = File::create(output).expect("Failed to create a.out");
+            writeln!(&mut output, "{}", file).expect("Failed to write to a.out")
         });
 }

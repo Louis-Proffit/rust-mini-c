@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 pub type Value = i64;
 pub type Ident<'a> = &'a str;
+pub type StackOffset = i16;
 
 pub const MAIN: &str = "main";
 pub const PUTCHAR: &str = "putchar";

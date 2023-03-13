@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use derive_new::new;
 use derive_getters::Getters;
-use crate::common::{Value, Ident, MALLOC, PUTCHAR, MAIN};
+use crate::common::{Value, Ident, MALLOC, PUTCHAR, MAIN, StackOffset};
 
 pub type StructSize = Value;
 pub type Unop = crate::parser::structure::Unop;
@@ -43,7 +43,7 @@ pub struct Formal<'a> {
 #[derive(new, Debug, Getters)]
 pub struct Field<'a> {
     name: Ident<'a>,
-    index: usize,
+    index: u8,
     typ: Typ<'a>,
 }
 
@@ -109,8 +109,8 @@ impl Struct<'_> {
 }
 
 impl Field<'_> {
-    pub fn c_offset(&self) -> usize {
-        self.index * 8
+    pub fn c_offset(&self) -> StackOffset {
+        (self.index * 8) as StackOffset
     }
 }
 
@@ -127,7 +127,6 @@ impl PartialEq<Self> for Struct<'_> {
 }
 
 impl Signature<'_> {
-
     pub fn main<'a>() -> Signature<'a> {
         Signature::new(MAIN, Typ::TInt, vec![])
     }

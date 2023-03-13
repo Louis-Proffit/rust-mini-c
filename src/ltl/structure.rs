@@ -1,31 +1,31 @@
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use derive_new::new;
-use crate::common::{Ident, Value};
+use crate::common::{Ident, StackOffset, Value};
 use crate::ertl::structure::{Label, MbBranch, Mbinop, MuBranch, Munop};
-use crate::ertl::structure::register::{PhysicalRegister, Register};
+use crate::ertl::structure::register::PhysicalRegister;
 
 #[derive(Debug, new)]
 pub struct File<'a> {
-    funs: HashMap<Ident<'a>, Fun<'a>>,
+    pub funs: HashMap<Ident<'a>, Fun<'a>>,
 }
 
 #[derive(Debug, new)]
 pub struct Fun<'a> {
-    name: Ident<'a>,
-    entry: Label,
-    body: Graph<'a>,
+    pub name: Ident<'a>,
+    pub entry: Label,
+    pub body: Graph<'a>,
 }
 
 #[derive(Debug, new)]
 pub struct Graph<'a> {
-    instrs: HashMap<Label, Instr<'a>>,
+    pub instrs: HashMap<Label, Instr<'a>>,
 }
 
 #[derive(Debug)]
 pub enum Instr<'a> {
-    ELoad(Register, u8, Register, Label),
-    EStore(Register, Register, u8, Label),
+    ELoad(PhysicalRegister, StackOffset, PhysicalRegister, Label),
+    EStore(PhysicalRegister, PhysicalRegister, StackOffset, Label),
     EGoto(Label),
     EReturn,
     EConst(Value, Operand, Label),
@@ -41,7 +41,7 @@ pub enum Instr<'a> {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Operand {
     Reg(PhysicalRegister),
-    Spilled(u16),
+    Spilled(StackOffset),
 }
 
 impl Display for Operand {

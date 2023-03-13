@@ -3,17 +3,6 @@ extern crate nom;
 extern crate logos;
 extern crate logos_nom_bridge;
 
-use std::rc::Rc;
-use crate::common::Stdout;
-use crate::ertl::{ertl_file, ErtlResult};
-use crate::ltl::{ltl_file, LtlResult};
-use crate::parser::{parse_file, ParserResult};
-use crate::rtl::{rtl_file, RtlResult};
-use crate::rtl::interpreter::{interp_rtl_file, RtlInterpreterResult};
-use crate::typer::{typ_file, TypResult};
-use crate::typer::context::FileContext;
-use crate::typer::interpreter::{interp_typed_file, TyperInterpreterResult};
-
 pub mod common;
 pub mod parser;
 pub mod typer;
@@ -24,6 +13,18 @@ pub mod ltl;
 pub mod interference;
 pub mod liveness;
 pub mod coloring;
+pub mod linearise;
+
+use crate::common::Stdout;
+use crate::ertl::{ertl_file, ErtlResult};
+use crate::linearise::{linearise, LinearisingResult};
+use crate::linearise::x86_64::Program;
+use crate::ltl::{ltl_file, LtlResult};
+use crate::parser::{parse_file, ParserResult};
+use crate::rtl::{rtl_file, RtlResult};
+use crate::rtl::interpreter::{interp_rtl_file, RtlInterpreterResult};
+use crate::typer::{typ_file, TypResult};
+use crate::typer::interpreter::{interp_typed_file, TyperInterpreterResult};
 
 pub fn minic_parse(input: &str) -> ParserResult {
     parse_file(input)
@@ -31,7 +32,7 @@ pub fn minic_parse(input: &str) -> ParserResult {
 
 impl parser::structure::File<'_> {
     pub fn minic_typ(&self) -> TypResult<typer::structure::File> {
-        typ_file(Rc::new(FileContext::default()), self)
+        typ_file(self)
     }
 }
 
@@ -59,5 +60,11 @@ impl rtl::structure::File<'_> {
 impl ertl::structure::File<'_> {
     pub fn minic_ltl(&self) -> LtlResult<ltl::structure::File> {
         ltl_file(self)
+    }
+}
+
+impl ltl::structure::File<'_> {
+    pub fn minic_linearise(&self) -> LinearisingResult<Program> {
+        linearise(self)
     }
 }
