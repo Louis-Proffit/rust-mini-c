@@ -10,7 +10,6 @@ use crate::rtl::structure::Fresh;
 
 #[derive(new)]
 pub struct Context<'a> {
-    pub frame_size: u16,
     pub coloring: Coloring,
     pub graph: HashMap<Label, Instr<'a>>,
 }

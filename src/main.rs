@@ -114,7 +114,7 @@ fn main() {
                 println!("LTL file :\n {}", file)
             }
             file
-        }).expect("Failes to ltl file")
+        }).expect("Failed to ltl file")
         .minic_linearise()
         .map(|file| {
             let mut output = File::create(output).expect("Failed to create a.out");

@@ -16,6 +16,13 @@ impl<'a> Context<'a> {
         self.code.nodes.push(node);
     }
 
+    pub fn emit_at_label_or(&mut self, label: Option<Label>, node: AsmNode<'a>) {
+        match label {
+            None => self.emit(node),
+            Some(label) => self.emit_at_label(label, node)
+        }
+    }
+
     pub fn emit(&mut self, node: AsmNode<'a>) {
         self.code.nodes.push(node);
     }

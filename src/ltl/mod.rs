@@ -34,7 +34,6 @@ fn ltl_fun<'a>(fun: &ertl::Fun<'a>) -> LtlResult<Fun<'a>> {
     let coloring = color_graph(&interference).map_err(|err| LtlError::ColoringError(err))?;
 
     let mut context = Context::new(
-        fun.locals.len() as u16 * 8,
         coloring,
         HashMap::new(),
     );
@@ -142,10 +141,9 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             Ok(())
         }
         ertl::Instr::EAllocFrame(l) => {
-            // TODO simplifier pour frame_size = 0
-            if context.frame_size != 0 {
+            if context.coloring.count_on_stack != 0 {
                 let add_rsp_lbl = context.insert(
-                    Instr::EMunop(Munop::Maddi(-(8 * context.frame_size as Value)), Operand::Reg(PhysicalRegister::Rsp), l.clone())
+                    Instr::EMunop(Munop::Maddi(-(8 * context.coloring.count_on_stack as Value)), Operand::Reg(PhysicalRegister::Rsp), l.clone())
                 );
                 let mov_rsp_lbl = context.insert(
                     Instr::EMBinop(Mbinop::MMov, Operand::Reg(PhysicalRegister::Rsp), Operand::Reg(PhysicalRegister::Rbp), add_rsp_lbl)
@@ -163,7 +161,7 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             Ok(())
         }
         ertl::Instr::EDeleteFrame(l) => {
-            if context.frame_size != 0 {
+            if context.coloring.count_on_stack != 0 {
                 let pop_lbl = context.insert(
                     Instr::EPop(Operand::Reg(PhysicalRegister::Rbp), l.clone()),
                 );

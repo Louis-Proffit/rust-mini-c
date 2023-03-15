@@ -46,6 +46,8 @@ pub struct Asm<'a> {
 
 pub enum AsmNode<'a> {
     Mov(Size, X86Operand, X86Operand),
+    Movz(Size, Size, X86Operand, X86Operand),
+    Movs(Size, Size, X86Operand, X86Operand),
     Lea(Size, X86Operand, X86Operand),
     Inc(Size, X86Operand),
     Dec(Size, X86Operand),
@@ -84,18 +86,18 @@ pub enum AsmNode<'a> {
     Jbe(Label),
     Cmp(Size, X86Operand, X86Operand),
     Test(Size, X86Operand, X86Operand),
-    Sete(X86Operand),
-    Setne(X86Operand),
-    Sets(X86Operand),
-    Setns(X86Operand),
-    Setg(X86Operand),
-    Setge(X86Operand),
-    Setl(X86Operand),
-    Setle(X86Operand),
-    Seta(X86Operand),
-    Setae(X86Operand),
-    Setb(X86Operand),
-    Setbe(X86Operand),
+    Sete(SizedPhysicalRegister),
+    Setne(SizedPhysicalRegister),
+    Sets(SizedPhysicalRegister),
+    Setns(SizedPhysicalRegister),
+    Setg(SizedPhysicalRegister),
+    Setge(SizedPhysicalRegister),
+    Setl(SizedPhysicalRegister),
+    Setle(SizedPhysicalRegister),
+    Seta(SizedPhysicalRegister),
+    Setae(SizedPhysicalRegister),
+    Setb(SizedPhysicalRegister),
+    Setbe(SizedPhysicalRegister),
     Pushq(X86Operand),
     Popq(X86Operand),
     Align(u8),
@@ -109,9 +111,21 @@ pub enum AsmNode<'a> {
     Label(Label),
     DeclFun(Ident<'a>),
     Globl(Ident<'a>),
-    Comment(Ident<'a>),
+    Comment(String),
 }
 
+pub struct SizedPhysicalRegister {
+    pub register: PhysicalRegister,
+    pub size: Size,
+}
+
+impl From<(PhysicalRegister, Size)> for SizedPhysicalRegister {
+    fn from(value: (PhysicalRegister, Size)) -> Self {
+        SizedPhysicalRegister { register: value.0, size: value.1 }
+    }
+}
+
+#[derive(Clone)]
 pub enum X86Operand {
     Constant(Value),
     Register(PhysicalRegister),
@@ -135,26 +149,12 @@ impl Into<X86Operand> for Operand {
     fn into(self) -> X86Operand {
         match self {
             Operand::Reg(r) => X86Operand::Register(r),
-            Operand::Spilled(o) => X86Operand::Offset(-(8 * o), PhysicalRegister::Rbp)
+            Operand::Spilled(o) => X86Operand::Offset(-8 * (o + 1), PhysicalRegister::Rbp)
         }
     }
 }
 
 pub trait X86: Display {}
-
-/*
-let movabsq a b = ins "movabsq %Ld, %s" a b
-let movsbw a b = ins "movsbw %a, %s" a () b
-let movsbl a b = ins "movsbl %a, %s" a () b
-let movsbq a b = ins "movsbq %a, %s" a () b
-let movswl a b = ins "movswl %a, %s" a () b
-let movswq a b = ins "movswq %a, %s" a () b
-let movslq a b = ins "movslq %a, %s" a () b
-let movzbw a b = ins "movzbw %a, %s" a () b
-let movzbl a b = ins "movzbl %a, %s" a () b
-let movzbq a b = ins "movzbq %a, %s" a () b
-let movzwl a b = ins "movzwl %a, %s" a () b
-let movzwq a b = ins "movzwq %a, %s" a () b*/
 
 impl Display for Program<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -191,6 +191,8 @@ impl Display for AsmNode<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             AsmNode::Mov(s, f1, f2) => write!(f, "\tmov{} {}, {}", s, f1, f2),
+            AsmNode::Movz(s1, s2, f1, f2) => write!(f, "\tmovz{}{} {}, {}", s1, s2, f1, f2),
+            AsmNode::Movs(s1, s2, f1, f2) => write!(f, "\tmovs{}{} {}, {}", s1, s2, f1, f2),
             AsmNode::Lea(s, f1, f2) => write!(f, "\tlea{} {}, {}", s, f1, f2),
             AsmNode::And(s, f1, f2) => write!(f, "\tand{} {}, {}", s, f1, f2),
             AsmNode::Or(s, f1, f2) => write!(f, "\tor{} {}, {}", s, f1, f2),
@@ -254,7 +256,7 @@ impl Display for AsmNode<'_> {
             AsmNode::Label(l) => write!(f, "{}:", mangle(l)),
             AsmNode::DeclFun(d) => write!(f, "{}:", d),
             AsmNode::Globl(d) => write!(f, "\t.globl {}", mangle(d)),
-            AsmNode::Comment(c) => write!(f, "#{}", c)
+            AsmNode::Comment(c) => write!(f, "#{}", c),
         }
     }
 }
@@ -266,6 +268,76 @@ impl Display for X86Operand {
             X86Operand::Register(r) => write!(f, "{}", r),
             X86Operand::Offset(o, r) => write!(f, "{}({})", o, r),
             X86Operand::OffsetScale(o, r, s, n) => write!(f, "{}({},{},{})", o, r, s, n),
+        }
+    }
+}
+
+impl Display for SizedPhysicalRegister {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "%")?;
+        match &self.register {
+            PhysicalRegister::Rax
+            | PhysicalRegister::Rbx
+            | PhysicalRegister::Rcx
+            | PhysicalRegister::Rdx => {
+                let core = match &self.register {
+                    PhysicalRegister::Rax => "a",
+                    PhysicalRegister::Rbx => "b",
+                    PhysicalRegister::Rcx => "c",
+                    PhysicalRegister::Rdx => "d",
+                    _ => unreachable!()
+                };
+                match &self.size {
+                    Size::B => write!(f, "{}l", core),
+                    Size::W => write!(f, "{}x", core),
+                    Size::L => write!(f, "e{}x", core),
+                    Size::Q => write!(f, "r{}x", core),
+                }
+            }
+            PhysicalRegister::Rdi
+            | PhysicalRegister::Rbp
+            | PhysicalRegister::Rsi
+            | PhysicalRegister::Rsp => {
+                let core = match &self.register {
+                    PhysicalRegister::Rdi => "di",
+                    PhysicalRegister::Rbp => "bp",
+                    PhysicalRegister::Rsi => "si",
+                    PhysicalRegister::Rsp => "sp",
+                    _ => unreachable!()
+                };
+                match &self.size {
+                    Size::B => write!(f, "{}l", core),
+                    Size::W => write!(f, "{}", core),
+                    Size::L => write!(f, "e{}", core),
+                    Size::Q => write!(f, "r{}", core),
+                }
+            }
+            PhysicalRegister::R8
+            | PhysicalRegister::R9
+            | PhysicalRegister::R10
+            | PhysicalRegister::R11
+            | PhysicalRegister::R12
+            | PhysicalRegister::R13
+            | PhysicalRegister::R14
+            | PhysicalRegister::R15 => {
+                let core = match &self.register {
+                    PhysicalRegister::R8 => "r8",
+                    PhysicalRegister::R9 => "r9",
+                    PhysicalRegister::R10 => "r10",
+                    PhysicalRegister::R11 => "r11",
+                    PhysicalRegister::R12 => "r12",
+                    PhysicalRegister::R13 => "r13",
+                    PhysicalRegister::R14 => "r14",
+                    PhysicalRegister::R15 => "r15",
+                    _ => unreachable!()
+                };
+                match &self.size {
+                    Size::B => write!(f, "{}b", core),
+                    Size::W => write!(f, "{}w", core),
+                    Size::L => write!(f, "{}d", core),
+                    Size::Q => write!(f, "{}b", core),
+                }
+            }
         }
     }
 }

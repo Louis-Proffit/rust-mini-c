@@ -48,7 +48,7 @@ impl Display for Operand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Operand::Reg(x) => write!(f, "{}", x),
-            Operand::Spilled(x) => write!(f, "%rsp({})", x)
+            Operand::Spilled(x) => write!(f, "stack {}", x)
         }
     }
 }
