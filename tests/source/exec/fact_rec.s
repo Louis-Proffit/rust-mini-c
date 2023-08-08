@@ -3,51 +3,44 @@
 main:
 	movq $0, %rdi
 	call fact_rec
-	addq $0, %rsp
-	movq $1, %rsi
-	cmpq %rsi, %rax
+	movq $1, %rdi
+	cmpq %rdi, %rax
 	sete %al
 	testq %rax, %rax
-	jnz L2216
-L2214:
+	jnz L2277
+L2275:
 	movq $1, %rdi
 	call fact_rec
-	addq $0, %rsp
 	movq $1, %r8
 	cmpq %r8, %rax
 	sete %al
 	testq %rax, %rax
-	jnz L2209
-L2207:
+	jnz L2270
+L2268:
 	movq $5, %rdi
 	call fact_rec
-	addq $0, %rsp
-	movq $120, %rsi
-	cmpq %rsi, %rax
+	movq $120, %rcx
+	cmpq %rcx, %rax
 	sete %al
 	testq %rax, %rax
-	jnz L2202
-L2200:
+	jnz L2263
+L2261:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	ret
-L2202:
+L2263:
 	movq $51, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L2200
-L2209:
+	jmp L2261
+L2270:
 	movq $50, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L2207
-L2216:
+	jmp L2268
+L2277:
 	movq $49, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L2214
+	jmp L2275
 fact_rec:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -56,29 +49,28 @@ fact_rec:
 	movq %rax, -16(%rbp)
 	movq $1, -24(%rbp)
 	movq -24(%rbp), %r10
-	movq -16(%rbp), %r10
-	cmpq %r10, %r10
-	setle %r10b
-	movq %r10, -16(%rbp)
+	movq -16(%rbp), %r11
+	cmpq %r10, %r11
+	setle %r11b
+	movq %r11, -16(%rbp)
 	movq -16(%rbp), %r10
 	testq %r10, %r10
-	jnz L2192
+	jnz L2290
 	movq %rax, -8(%rbp)
-	movq $1, %rcx
-	subq %rcx, %rax
+	movq $1, %rdi
+	subq %rdi, %rax
 	movq %rax, %rdi
 	call fact_rec
-	addq $0, %rsp
-	movq -8(%rbp), %r10
-	imulq %rax, %r10
-	movq %r10, -8(%rbp)
-L2185:
+	movq -8(%rbp), %r11
+	imulq %rax, %r11
+	movq %r11, -8(%rbp)
+L2283:
 	movq -8(%rbp), %rax
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L2192:
+L2290:
 	movq $1, -8(%rbp)
-	jmp L2185
+	jmp L2283
 	.data
 

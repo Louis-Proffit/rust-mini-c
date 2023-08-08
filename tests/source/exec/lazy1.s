@@ -1,360 +1,302 @@
 	.text
 	.globl main
-zero:
-	pushq %rbp
-	movq %rsp, %rbp
-	addq $-32, %rsp
-	movq $10, %rax
-	movq %rax, -32(%rbp)
-L3368:
-	movq %rax, -24(%rbp)
-	movq -24(%rbp), %r10
-	testq %r10, %r10
-	jz L3361
-	movq $1, -16(%rbp)
-	subq -16(%rbp), %rax
-	movq %rax, -8(%rbp)
-	jmp L3368
-L3361:
-	movq %rbp, %rsp
-	popq %rbp
+any:
 	ret
 main:
 	pushq %rbp
 	movq %rsp, %rbp
 	addq $-16, %rsp
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3343
+	jz L3473
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3343
+	jz L3473
 	movq $1, %rax
-L3343:
+L3473:
 	testq %rax, %rax
-L3343:
-	jnz L3342
-L3340:
+	jnz L3472
+L3470:
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3335
+	jz L3465
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3335
+	jz L3465
 	movq $1, %rax
-L3335:
+L3465:
 	testq %rax, %rax
-L3335:
-	jnz L3334
-L3332:
+	jnz L3464
+L3462:
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3327
+	jz L3457
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3327
+	jz L3457
 	movq $1, %rax
-L3327:
+L3457:
 	testq %rax, %rax
-L3327:
-	jnz L3326
-L3324:
+	jnz L3456
+L3454:
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3319
+	jz L3449
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3319
+	jz L3449
 	movq $1, %rax
-L3319:
+L3449:
 	testq %rax, %rax
-L3319:
-	jnz L3318
-L3316:
+	jnz L3448
+L3446:
 	movq $0, %rax
 	testq %rax, %rax
-	jz L3311
+	jz L3441
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3311
+	jz L3441
 	movq $1, %rax
-L3311:
+L3441:
 	testq %rax, %rax
-L3311:
-	jnz L3310
-L3308:
+	jnz L3440
+L3438:
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3303
+	jz L3433
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3303
+	jz L3433
 	movq $1, %rax
-L3303:
+L3433:
 	testq %rax, %rax
-L3303:
-	jnz L3302
-L3300:
+	jnz L3432
+L3430:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3294
+	jnz L3424
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3293
-L3294:
+	jz L3423
+L3424:
 	movq $1, %rax
-L3293:
+L3423:
 	testq %rax, %rax
-L3293:
-	jnz L3292
-L3290:
+	jnz L3422
+L3420:
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3286
+	jnz L3416
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3285
-L3286:
+	jz L3415
+L3416:
 	movq $1, %rax
-L3285:
+L3415:
 	testq %rax, %rax
-L3285:
-	jnz L3284
-L3282:
+	jnz L3414
+L3412:
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3278
+	jnz L3408
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3277
-L3278:
+	jz L3407
+L3408:
 	movq $1, %rax
-L3277:
+L3407:
 	testq %rax, %rax
-L3277:
-	jnz L3276
-L3274:
+	jnz L3406
+L3404:
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3270
+	jnz L3400
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3269
-L3270:
+	jz L3399
+L3400:
 	movq $1, %rax
-L3269:
+L3399:
 	testq %rax, %rax
-L3269:
-	jnz L3268
-L3266:
+	jnz L3398
+L3396:
 	movq $1, %rax
 	testq %rax, %rax
-	jnz L3262
+	jnz L3392
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3261
-L3262:
+	jz L3391
+L3392:
 	movq $1, %rax
-L3261:
+L3391:
 	testq %rax, %rax
-L3261:
-	jnz L3260
-L3258:
+	jnz L3390
+L3388:
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3254
+	jnz L3384
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3253
-L3254:
+	jz L3383
+L3384:
 	movq $1, %rax
-L3253:
+L3383:
 	testq %rax, %rax
-L3253:
-	jnz L3252
-L3250:
+	jnz L3382
+L3380:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $65, -16(%rbp)
 	call false
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3242
+	jz L3372
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3242
+	jz L3372
 	movq $1, %rax
-L3242:
+L3372:
 	addq %rax, -16(%rbp)
 	movq -16(%rbp), %rdi
 	call putchar
-	addq $0, %rsp
 	movq $64, -8(%rbp)
 	call true
-	addq $0, %rsp
 	testq %rax, %rax
-	jnz L3235
+	jnz L3365
 	call fail
-	addq $0, %rsp
 	testq %rax, %rax
-	jz L3234
-L3235:
+	jz L3364
+L3365:
 	movq $1, %rax
-L3234:
+L3364:
 	addq %rax, -8(%rbp)
 	movq -8(%rbp), %rdi
 	call putchar
-	addq $0, %rsp
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-	jmp L3234
-	jmp L3235
-	jmp L3242
-	jmp L3242
-L3252:
+	jmp L3364
+	jmp L3365
+	jmp L3372
+	jmp L3372
+L3382:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3250
-	jmp L3253
-	jmp L3254
-L3260:
+	jmp L3380
+	jmp L3383
+	jmp L3384
+L3390:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3258
-	jmp L3261
-	jmp L3262
-L3268:
+	jmp L3388
+	jmp L3391
+	jmp L3392
+L3398:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3266
-	jmp L3269
-	jmp L3270
-L3276:
+	jmp L3396
+	jmp L3399
+	jmp L3400
+L3406:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3274
-	jmp L3277
-	jmp L3278
-L3284:
+	jmp L3404
+	jmp L3407
+	jmp L3408
+L3414:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3282
-	jmp L3285
-	jmp L3286
-L3292:
+	jmp L3412
+	jmp L3415
+	jmp L3416
+L3422:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3290
-	jmp L3293
-	jmp L3294
-L3302:
+	jmp L3420
+	jmp L3423
+	jmp L3424
+L3432:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3300
-	jmp L3303
-	jmp L3303
-L3310:
+	jmp L3430
+	jmp L3433
+	jmp L3433
+L3440:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3308
-	jmp L3311
-	jmp L3311
-L3318:
+	jmp L3438
+	jmp L3441
+	jmp L3441
+L3448:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3316
-	jmp L3319
-	jmp L3319
-L3326:
+	jmp L3446
+	jmp L3449
+	jmp L3449
+L3456:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3324
-	jmp L3327
-	jmp L3327
-L3334:
+	jmp L3454
+	jmp L3457
+	jmp L3457
+L3464:
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3332
-	jmp L3335
-	jmp L3335
-L3342:
+	jmp L3462
+	jmp L3465
+	jmp L3465
+L3472:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L3340
-	jmp L3343
-	jmp L3343
+	jmp L3470
+	jmp L3473
+	jmp L3473
+zero:
+	pushq %rbp
+	movq %rsp, %rbp
+	addq $-32, %rsp
+	movq $10, %rax
+	movq %rax, -32(%rbp)
+L3487:
+	movq %rax, -24(%rbp)
+	movq -24(%rbp), %r10
+	testq %r10, %r10
+	jz L3480
+	movq $1, -16(%rbp)
+	subq -16(%rbp), %rax
+	movq %rax, -8(%rbp)
+	jmp L3487
+L3480:
+	movq %rbp, %rsp
+	popq %rbp
+	ret
+false:
+	call zero
+	ret
 fail:
 	pushq %rbp
 	movq %rsp, %rbp
 	addq $-16, %rsp
 	call any
 	movq %rax, -8(%rbp)
-	addq $0, %rsp
 	call zero
 	movq %rax, -16(%rbp)
-	addq $0, %rsp
 	movq -8(%rbp), %rax
 	cqto
-	idivq %rax
-	movq %rax, -16(%rbp)
+	idivq -16(%rbp)
+	movq %rax, -8(%rbp)
 	movq -8(%rbp), %rax
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-any:
-	ret
-false:
-	call zero
-	addq $0, %rsp
-	ret
 true:
 	call zero
-	addq $0, %rsp
-	cmpq %rax, $0
+	movq $0, %r11
+	cmpq %rax, %r11
 	sete %al
 	ret
 	.data

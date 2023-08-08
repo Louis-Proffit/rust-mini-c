@@ -6,23 +6,21 @@ main:
 	addq $-8, %rsp
 	movq $10, -8(%rbp)
 	movq -8(%rbp), %rdx
-L4913:
-	movq -8(%rbp), %r8
-	testq %r8, %r8
-	jz L4902
-	movq $1, %rdx
-	subq %rdx, -8(%rbp)
+L5021:
+	movq -8(%rbp), %rcx
+	testq %rcx, %rcx
+	jz L5010
+	movq $1, %rax
+	subq %rax, -8(%rbp)
 	movq -8(%rbp), %rax
 	movq $65, %rdi
-	movq -8(%rbp), %rcx
-	addq %rcx, %rdi
+	movq -8(%rbp), %rax
+	addq %rax, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L4913
-L4902:
+	jmp L5021
+L5010:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	movq %rbp, %rsp
 	popq %rbp

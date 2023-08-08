@@ -52,7 +52,7 @@ fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
 
     for (index, arg_reg) in enumerate(&fun.arguments).rev() {
         if index >= 6 {
-            fetch_arg_lbl = body.insert(Instr::EGetParam((8 * (index - 6)) as StackOffset, arg_reg.clone().into(), fetch_arg_lbl.clone()));
+            fetch_arg_lbl = body.insert(Instr::EGetParam(index as StackOffset, arg_reg.clone().into(), fetch_arg_lbl.clone()));
         } else {
             fetch_arg_lbl = body.insert(Instr::EMBinop(Mbinop::MMov, Register::Physical(PARAMETERS[index].clone()), arg_reg.clone().into(), fetch_arg_lbl));
         }
@@ -78,11 +78,11 @@ fn ertl_fun<'a>(fun: &rtl::Fun<'a>) -> ErtlResult<Fun<'a>> {
 fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) -> ErtlResult<()> {
     match instr {
         rtl::Instr::EConst(v, r, l) => graph.insert_at_label(label, Instr::EConst(v.clone(), r.clone().into(), l.clone())),
-        rtl::Instr::ELoad(x, o, r, l) => graph.insert_at_label(label, Instr::ELoad(x.clone().into(), *o, r.clone().into(), l.clone())),
-        rtl::Instr::EStore(x, r, o, l) => graph.insert_at_label(label, Instr::EStore(x.clone().into(), r.clone().into(), *o, l.clone())),
+        rtl::Instr::ELoad(addr, o, dest, l) => graph.insert_at_label(label, Instr::ELoad(addr.clone().into(), *o, dest.clone().into(), l.clone())),
+        rtl::Instr::EStore(value, addr, o, l) => graph.insert_at_label(label, Instr::EStore(value.clone().into(), addr.clone().into(), *o, l.clone())),
         rtl::Instr::EMUnop(op, r, l) => graph.insert_at_label(label, Instr::EMUnop(op.clone(), r.clone().into(), l.clone())),
         rtl::Instr::EMBinop(Mbinop::MDiv, r1, r2, l) => {
-            let post_mov_label = graph.insert(Instr::EMBinop(Mbinop::MMov, Register::Physical(PhysicalRegister::Rax), r1.clone().into(), l.clone()));
+            let post_mov_label = graph.insert(Instr::EMBinop(Mbinop::MMov, Register::Physical(PhysicalRegister::Rax), r2.clone().into(), l.clone()));
             let div_lbl = graph.insert(Instr::EMBinop(Mbinop::MDiv, r1.clone().into(), Register::Physical(PhysicalRegister::Rax), post_mov_label));
             graph.insert_at_label(label, Instr::EMBinop(Mbinop::MMov, r2.clone().into(), Register::Physical(PhysicalRegister::Rax), div_lbl))
         }
@@ -94,7 +94,12 @@ fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) 
             let args_on_stack = if args_count <= 6 { 0 } else { args_count - 6 };
             let args_in_registers = args_count - args_on_stack;
 
-            let rsp_operation_lbl = graph.insert(Instr::EMUnop(Munop::Maddi((args_on_stack * 8) as Value), Register::Physical(PhysicalRegister::Rsp), l.clone()));
+            let rsp_operation_lbl = if args_on_stack > 0 {
+                graph.insert(Instr::EMUnop(Munop::Maddi((args_on_stack * 8) as Value), Register::Physical(PhysicalRegister::Rsp), l.clone()))
+            } else {
+                l.clone()
+            };
+
             let result_lbl = graph.insert(Instr::EMBinop(Mbinop::MMov, Register::Physical(RESULT), r.clone().into(), rsp_operation_lbl));
 
             if args_count > 0 {
@@ -102,18 +107,17 @@ fn ertl_instr<'a>(graph: &mut Graph<'a>, label: &Label, instr: &rtl::Instr<'a>) 
 
                 let mut next_arg_label = call_lbl;
 
-                for (index, arg) in enumerate(args).rev() {
+                for (index, arg) in enumerate(args) {
                     if index >= 6 {
                         next_arg_label = graph.insert(Instr::EPushParam(arg.clone().into(), next_arg_label.clone()));
-                    } else if index > 0 {
-                        next_arg_label = graph.insert(Instr::EMBinop(Mbinop::MMov, arg.clone().into(), Register::Physical(PARAMETERS[index].clone()), next_arg_label.clone()));
                     } else {
-                        graph.insert_at_label(label, Instr::EMBinop(Mbinop::MMov, arg.clone().into(), Register::Physical(PARAMETERS[0].clone()), next_arg_label.clone()));
-                        return Ok(());
+                        next_arg_label = graph.insert(Instr::EMBinop(Mbinop::MMov, arg.clone().into(), Register::Physical(PARAMETERS[index].clone()), next_arg_label.clone()));
                     }
                 }
+                graph.insert_at_label(label, Instr::EGoto(next_arg_label));
+            } else {
+                graph.insert_at_label(label, Instr::ECall(name.clone(), args_in_registers, result_lbl))
             }
-            graph.insert_at_label(label, Instr::ECall(name.clone(), args_in_registers, result_lbl))
         }
         rtl::Instr::EGoto(l) => graph.insert_at_label(label, Instr::EGoto(l.clone()))
     }

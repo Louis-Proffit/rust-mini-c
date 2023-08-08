@@ -8,9 +8,11 @@
       <sourceFolder url="file://$MODULE_DIR$/core/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/testing-utils/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/testing-utils/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/irc/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/testing-utils/target" />
       <excludeFolder url="file://$MODULE_DIR$/core/target" />
+      <excludeFolder url="file://$MODULE_DIR$/irc/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

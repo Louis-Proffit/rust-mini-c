@@ -155,7 +155,7 @@ fn rtl_expr<'a>(graph: &mut Graph<'a>, destr: &PseudoRegister, destl: &Label, ex
         }
         typer::ExprNode::EAssignField(expr, field, value) => {
             let expr_reg = PseudoRegister::fresh();
-            let store_lbl = graph.insert(Instr::EStore(expr_reg.clone(), destr.clone(), field.c_offset(), destl.clone()));
+            let store_lbl = graph.insert(Instr::EStore(destr.clone(), expr_reg.clone(), field.c_offset(), destl.clone()));
             let expr_lbl = rtl_expr(graph, &expr_reg, &store_lbl, expr)?;
             rtl_expr(graph, &destr, &expr_lbl, value)
         }

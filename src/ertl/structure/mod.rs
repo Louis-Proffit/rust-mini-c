@@ -58,11 +58,11 @@ struct DisplayableGraph<'a> {
 }
 
 impl<'a> Graph<'a> {
-    pub(crate) fn insert_at_label(&mut self, label: &Label, instr: Instr<'a>) {
+    pub fn insert_at_label(&mut self, label: &Label, instr: Instr<'a>) {
         self.instrs.insert(label.clone(), instr);
     }
 
-    pub(crate) fn insert(&mut self, instr: Instr<'a>) -> Label {
+    pub fn insert(&mut self, instr: Instr<'a>) -> Label {
         let label = Label::fresh();
         self.instrs.insert(label.clone(), instr);
         label

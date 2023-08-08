@@ -2,21 +2,17 @@
 	.globl main
 main:
 	movq $65, %rdi
-	movq $8, %rsi
-	addq %rsi, %rdi
+	movq $8, %rcx
+	addq %rcx, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $65, %rdi
-	movq $16, %r9
-	addq %r9, %rdi
+	movq $16, %rdx
+	addq %rdx, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	ret
 	.data

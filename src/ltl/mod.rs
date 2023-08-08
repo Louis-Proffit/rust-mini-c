@@ -7,13 +7,13 @@ use crate::coloring::color_graph;
 use crate::common::Value;
 use crate::ertl::structure as ertl;
 use crate::ertl::structure::{Label, Mbinop};
-use crate::ertl::structure::register::{PhysicalRegister, TMP_1};
+use crate::ertl::structure::register::{PhysicalRegister, TMP_1, TMP_2};
 use crate::interference::interference_graph;
 use crate::liveness::liveness_graph;
 use crate::ltl::context::Context;
 use crate::ltl::error::LtlError;
 use crate::ltl::structure::{File, Fun, Graph, Instr, Operand};
-use crate::rtl::structure::Munop;
+use crate::rtl::structure::{Fresh, Munop};
 
 
 pub type LtlResult<T> = Result<T, LtlError>;
@@ -59,28 +59,60 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
             Ok(())
         }
         ertl::Instr::ELoad(addr, o, dest, l) => {
-            match (context.color(addr)?, context.color(dest)?) {
-                (Operand::Reg(r1), Operand::Reg(r2)) => {
-                    context.insert_at_label(
-                        label.clone(),
-                        Instr::ELoad(r1, *o, r2, l.clone()),
-                    );
-                    Ok(())
+            let (addr, dest) = (context.color(addr)?, context.color(dest)?);
+            let (post_label, dest) = match &dest {
+                Operand::Register(r) => {
+                    (l.clone(), r.clone())
                 }
-                _ => todo!()
-            }
+                Operand::Spilled(_) => {
+                    let o = TMP_2;
+                    let label = context.insert(Instr::EMBinop(Mbinop::MMov, Operand::Register(o.clone()), dest, l.clone()));
+                    (label, o)
+                }
+            };
+            let (pre_label, addr) = match &addr {
+                Operand::Register(r) => (label.clone(), r.clone()),
+                Operand::Spilled(_) => {
+                    let o = TMP_1;
+                    let pre_label = Label::fresh();
+                    context.insert_at_label(label.clone(), Instr::EMBinop(Mbinop::MMov, addr, Operand::Register(o.clone()), pre_label.clone()));
+                    (pre_label, o)
+                }
+            };
+            context.insert_at_label(
+                pre_label,
+                Instr::ELoad(addr, *o, dest, post_label),
+            );
+            Ok(())
         }
         ertl::Instr::EStore(value, addr, o, l) => {
-            match (context.color(value)?, context.color(addr)?) {
-                (Operand::Reg(r1), Operand::Reg(r2)) => {
+            let (value, addr) = (context.color(value)?, context.color(addr)?);
+            let (addr_lbl, addr) = match &addr {
+                Operand::Register(r) => (label.clone(), r.clone()),
+                Operand::Spilled(_) => {
+                    let r = TMP_1;
+                    let addr_lbl = Label::fresh();
                     context.insert_at_label(
                         label.clone(),
-                        Instr::EStore(r1, r2, *o, l.clone()),
+                        Instr::EMBinop(Mbinop::MMov, addr, Operand::Register(r.clone()), addr_lbl.clone()),
                     );
-                    Ok(())
+                    (addr_lbl, r)
                 }
-                _ => todo!()
-            }
+            };
+            let (store_lbl, value) = match &value {
+                Operand::Register(r) => (addr_lbl, r.clone()),
+                Operand::Spilled(_) => {
+                    let o = TMP_2;
+                    let store_lbl = Label::fresh();
+                    context.insert_at_label(addr_lbl, Instr::EMBinop(Mbinop::MMov, value, Operand::Register(o.clone()), store_lbl.clone()));
+                    (store_lbl, o)
+                }
+            };
+            context.insert_at_label(
+                store_lbl,
+                Instr::EStore(value, addr, *o, l.clone()),
+            );
+            Ok(())
         }
         ertl::Instr::EMUnop(op, r, l) => {
             let color = context.color(r)?;
@@ -143,14 +175,14 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
         ertl::Instr::EAllocFrame(l) => {
             if context.coloring.count_on_stack != 0 {
                 let add_rsp_lbl = context.insert(
-                    Instr::EMunop(Munop::Maddi(-(8 * context.coloring.count_on_stack as Value)), Operand::Reg(PhysicalRegister::Rsp), l.clone())
+                    Instr::EMunop(Munop::Maddi(-(8 * context.coloring.count_on_stack as Value)), Operand::Register(PhysicalRegister::Rsp), l.clone())
                 );
                 let mov_rsp_lbl = context.insert(
-                    Instr::EMBinop(Mbinop::MMov, Operand::Reg(PhysicalRegister::Rsp), Operand::Reg(PhysicalRegister::Rbp), add_rsp_lbl)
+                    Instr::EMBinop(Mbinop::MMov, Operand::Register(PhysicalRegister::Rsp), Operand::Register(PhysicalRegister::Rbp), add_rsp_lbl)
                 );
                 context.insert_at_label(
                     label.clone(),
-                    Instr::EPush(Operand::Reg(PhysicalRegister::Rbp), mov_rsp_lbl),
+                    Instr::EPush(Operand::Register(PhysicalRegister::Rbp), mov_rsp_lbl),
                 );
             } else {
                 context.insert_at_label(
@@ -163,11 +195,11 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
         ertl::Instr::EDeleteFrame(l) => {
             if context.coloring.count_on_stack != 0 {
                 let pop_lbl = context.insert(
-                    Instr::EPop(Operand::Reg(PhysicalRegister::Rbp), l.clone()),
+                    Instr::EPop(Operand::Register(PhysicalRegister::Rbp), l.clone()),
                 );
                 context.insert_at_label(
                     label.clone(),
-                    Instr::EMBinop(Mbinop::MMov, Operand::Reg(PhysicalRegister::Rbp), Operand::Reg(PhysicalRegister::Rsp), pop_lbl),
+                    Instr::EMBinop(Mbinop::MMov, Operand::Register(PhysicalRegister::Rbp), Operand::Register(PhysicalRegister::Rsp), pop_lbl),
                 );
             } else {
                 context.insert_at_label(
@@ -180,22 +212,22 @@ fn ltl_instr<'a>(context: &mut Context<'a>, label: &Label, instr: &ertl::Instr<'
         ertl::Instr::EGetParam(index, dest, l) => {
             let color = context.color(dest)?;
             match color {
-                Operand::Reg(r) => {
+                Operand::Register(r) => {
                     context.insert_at_label(
                         label.clone(),
-                        Instr::ELoad(PhysicalRegister::Rbp, (index - 7) * 8 + 16, r, l.clone()),
+                        Instr::ELoad(PhysicalRegister::Rbp, (index - 6) * 8 + 16, r, l.clone()),
                     );
                     Ok(())
                 }
                 Operand::Spilled(o) => {
                     let tmp = TMP_1;
-                    context.insert_at_label(
-                        label.clone(),
-                        Instr::ELoad(PhysicalRegister::Rbp, (index - 7) * 8 + 16, tmp.clone(), l.clone()),
+
+                    let store_lbl = context.insert(
+                        Instr::EStore(tmp.clone(), PhysicalRegister::Rbp, -8 * (o + 1), l.clone()),
                     );
                     context.insert_at_label(
                         label.clone(),
-                        Instr::EStore(tmp, PhysicalRegister::Rbp, o, l.clone()),
+                        Instr::ELoad(PhysicalRegister::Rbp, (index - 6) * 8 + 16, tmp, store_lbl.clone()),
                     );
                     Ok(())
                 }

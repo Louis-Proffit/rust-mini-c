@@ -8,6 +8,7 @@ use std::io::Write;
 macro_rules! test_bad {
     ($($name:ident: $path:literal,)*) => {
         $(
+        // #[serial]
         #[test]
         #[should_panic]
         fn $name() {
@@ -21,6 +22,7 @@ macro_rules! test_bad {
 macro_rules! test_good {
     ($($name:ident: $path:literal,)*) => {
         $(
+        // #[serial]
         #[test]
         fn $name() {
             _test_good($path);
@@ -58,13 +60,25 @@ fn _test_good(base_path: &str) {
         .expect("Failed to typ file");
 
     let rtl = typed.minic_rtl()
+        .map(|file| {
+            println!("{}", file);
+            file
+        })
         .expect("Failed to rtl file");
 
     let ertl = rtl.minic_ertl()
+        .map(|file| {
+            println!("{}", file);
+            file
+        })
         .expect("Failed to ertl file");
 
 
     let ltl = ertl.minic_ltl()
+        .map(|file| {
+            println!("{}", file);
+            file
+        })
         .expect("Failed to ltl file");
 
     let x86 = ltl.minic_linearise()
@@ -97,6 +111,7 @@ fn _test_good(base_path: &str) {
 
 mod good {
     use crate::_test_good;
+    // use serial_test::serial;
 
     // for_1: "tests/source/exec/for1.c" -> "tests/source/exec/for1.out",
     // mandelbrot: "tests/source/exec/mandelbrot.c" -> "tests/source/exec/mandelbrot.out",
@@ -165,6 +180,7 @@ mod good {
 
 mod bad {
     use crate::_test_bad;
+    // use serial_test::serial;
 
     test_bad!(
         deref_null: "tests/source/exec-fail/deref_null.c",

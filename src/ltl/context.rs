@@ -31,7 +31,7 @@ impl<'a> Context<'a> {
                 self.coloring.colors.get(reg).ok_or(LtlError::MissingRegisterColor(reg.clone())).cloned()
             }
             Register::Physical(reg) => {
-                Ok(Operand::Reg(reg.clone()))
+                Ok(Operand::Register(reg.clone()))
             }
         }
     }

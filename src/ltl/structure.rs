@@ -40,14 +40,14 @@ pub enum Instr<'a> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Operand {
-    Reg(PhysicalRegister),
+    Register(PhysicalRegister),
     Spilled(StackOffset),
 }
 
 impl Display for Operand {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Operand::Reg(x) => write!(f, "{}", x),
+            Operand::Register(x) => write!(f, "{}", x),
             Operand::Spilled(x) => write!(f, "stack {}", x)
         }
     }
@@ -57,7 +57,7 @@ impl Display for Instr<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Instr::ELoad(addr, offset, dest, l) => write!(f, "load {}({}) in {} --> {}", addr, offset, dest, l),
-            Instr::EStore(addr, value, offset, l) => write!(f, "store {} in {}({}) --> {}", value, addr, offset, l),
+            Instr::EStore(value, addr, offset, l) => write!(f, "store {} in {}({}) --> {}", value, addr, offset, l),
             Instr::EGoto(l) => write!(f, "goto {}", l),
             Instr::EReturn => write!(f, "return"),
             Instr::EConst(c, op, l) => write!(f, "mov ${} {} --> {}", c, op, l),
@@ -91,6 +91,7 @@ impl Display for Graph<'_> {
 
 impl Display for File<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "=== LTL =================================================")?;
         for (_name, fun) in &self.funs {
             writeln!(f, "{}", fun)?;
         }

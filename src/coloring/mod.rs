@@ -50,7 +50,7 @@ pub fn color_graph(graph: &InterferenceGraph) -> ColoringResult<Coloring> {
                 &allocatable,
             )
         }) {
-            colors.insert(reg.clone(), Operand::Reg(color.clone()));
+            colors.insert(reg.clone(), Operand::Register(color.clone()));
             todo.remove(&reg);
             for other in &graph.arcs.get(&Register::Pseudo(reg)).unwrap().intfs {
                 match other {
@@ -85,7 +85,7 @@ fn search_one_color_with_preference(
                         Register::Pseudo(pref) => {
                             if current_allocation.contains_key(pref) {
                                 match current_allocation.get(pref).unwrap() {
-                                    Operand::Reg(pref_color) if pref_color == color => {
+                                    Operand::Register(pref_color) if pref_color == color => {
                                         return Some((reg.clone(), color.clone()));
                                     }
                                     _ => {}
@@ -131,7 +131,7 @@ fn search_pref_with_known_color(
             match pref {
                 Register::Pseudo(pref) => {
                     match current_allocation.get(pref) {
-                        Some(Operand::Reg(color)) => {
+                        Some(Operand::Register(color)) => {
                             if allocatable.get(reg).unwrap().contains(color) {
                                 return Some((reg.clone(), color.clone()));
                             }

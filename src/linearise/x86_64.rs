@@ -125,7 +125,7 @@ impl From<(PhysicalRegister, Size)> for SizedPhysicalRegister {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum X86Operand {
     Constant(Value),
     Register(PhysicalRegister),
@@ -148,7 +148,7 @@ impl Into<X86Operand> for PhysicalRegister {
 impl Into<X86Operand> for Operand {
     fn into(self) -> X86Operand {
         match self {
-            Operand::Reg(r) => X86Operand::Register(r),
+            Operand::Register(r) => X86Operand::Register(r),
             Operand::Spilled(o) => X86Operand::Offset(-8 * (o + 1), PhysicalRegister::Rbp)
         }
     }

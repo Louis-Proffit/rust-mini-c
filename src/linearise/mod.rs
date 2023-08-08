@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::ertl::structure::{Label, Mbinop, MuBranch, Munop};
-use crate::ertl::structure::register::TMP_1;
+use crate::ertl::structure::register::{PhysicalRegister, TMP_1, TMP_2};
 use crate::linearise::context::Context;
 use crate::linearise::error::LinearisingError;
 use crate::linearise::x86_64::{Asm, AsmNode, Program, Section, Size, SizedPhysicalRegister, X86Operand};
@@ -65,7 +65,7 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
             lin(context, graph, l)
         }
         Instr::EGoto(l) => {
-            if context.labels.contains(l) {
+            if context.visited.contains(l) {
                 context.need_label(l.clone());
                 context.emit_at_label(label.clone(), AsmNode::Jmp(l.clone()));
                 Ok(())
@@ -90,27 +90,28 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
                 }
                 _ => {
                     let (r_or_reg, label) = match r {
-                        Operand::Reg(r) => (r, Some(label)),
+                        Operand::Register(r) => (r, Some(label)),
                         Operand::Spilled(_) => {
                             context.emit_at_label(label.clone(), AsmNode::Mov(Size::Q, r.clone().into(), TMP_1.into()));
                             (&TMP_1, None)
                         }
                     };
-                    let l = match op {
+                    let v_reg = TMP_2;
+                    match op {
                         Munop::Msetei(v) => {
-                            context.emit_at_label_or(label.cloned(), AsmNode::Cmp(Size::Q, r_or_reg.clone().into(), (*v).into()));
+                            context.emit_at_label_or(label.cloned(), AsmNode::Mov(Size::Q, (*v).into(), v_reg.clone().into()));
+                            context.emit(AsmNode::Cmp(Size::Q, r_or_reg.clone().into(), v_reg.clone().into()));
                             context.emit(AsmNode::Sete((r_or_reg.clone(), Size::B).into()));
-                            l
                         }
                         Munop::Msetnei(v) => {
-                            context.emit_at_label_or(label.cloned(), AsmNode::Cmp(Size::Q, r_or_reg.clone().into(), (*v).into()));
+                            context.emit_at_label_or(label.cloned(), AsmNode::Mov(Size::Q, (*v).into(), v_reg.clone().into()));
+                            context.emit(AsmNode::Cmp(Size::Q, r_or_reg.clone().into(), v_reg.clone().into()));
                             context.emit(AsmNode::Setne((r_or_reg.clone(), Size::B).into()));
-                            l
                         }
                         _ => unreachable!()
                     };
                     match r {
-                        Operand::Reg(_) => {}
+                        Operand::Register(_) => {}
                         Operand::Spilled(_) => {
                             context.emit(AsmNode::Mov(Size::Q, r_or_reg.clone().into(), r.clone().into()));
                         }
@@ -120,57 +121,61 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
             }
         }
         Instr::EMBinop(op, r1, r2, l) => {
-            let r1 = match (r1, r2) {
+            let (r1, label):(X86Operand, Option<Label>) = match (r1, r2) {
                 (Operand::Spilled(_), Operand::Spilled(_)) => {
-                    context.emit(AsmNode::Mov(Size::Q, r1.clone().into(), X86Operand::Register(TMP_1)));
-                    X86Operand::Register(TMP_1)
+                    let r = TMP_1;
+                    context.emit(AsmNode::Mov(Size::Q, r1.clone().into(), X86Operand::Register(r.clone())));
+                    (X86Operand::Register(r), None)
                 }
                 _ => {
-                    r1.clone().into()
+                    (r1.clone().into(), Some(label.clone()))
                 }
             };
             match op {
                 Mbinop::MMov => {
-                    context.emit_at_label(label.clone(), AsmNode::Mov(Size::Q, r1, r2.clone().into()));
+                    context.emit_at_label_or(label, AsmNode::Mov(Size::Q, r1, r2.clone().into()));
                     lin(context, graph, l)
                 }
                 Mbinop::MAdd => {
-                    context.emit_at_label(label.clone(), AsmNode::Add(Size::Q, r1, r2.clone().into()));
+                    context.emit_at_label_or(label, AsmNode::Add(Size::Q, r1, r2.clone().into()));
                     lin(context, graph, l)
                 }
                 Mbinop::MSub => {
-                    context.emit_at_label(label.clone(), AsmNode::Sub(Size::Q, r1, r2.clone().into()));
+                    context.emit_at_label_or(label, AsmNode::Sub(Size::Q, r1, r2.clone().into()));
                     lin(context, graph, l)
                 }
                 Mbinop::MMul => {
                     match r2 {
-                        Operand::Reg(r) => {
-                            context.emit_at_label(label.clone(), AsmNode::Imul(Size::Q, r1, r2.clone().into()));
+                        Operand::Register(_) => {
+                            context.emit_at_label_or(label, AsmNode::Imul(Size::Q, r1, r2.clone().into()));
                             lin(context, graph, l)
                         }
                         Operand::Spilled(_) => {
                             let r2: X86Operand = r2.clone().into();
-                            context.emit_at_label(label.clone(), AsmNode::Mov(Size::Q, r2.clone(), TMP_1.into()));
-                            context.emit(AsmNode::Imul(Size::Q, r1, TMP_1.into()));
-                            context.emit(AsmNode::Mov(Size::Q, TMP_1.into(), r2));
+                            let new_r2 = TMP_2;
+                            context.emit_at_label_or(label, AsmNode::Mov(Size::Q, r2.clone(), new_r2.clone().into()));
+                            context.emit(AsmNode::Imul(Size::Q, r1, new_r2.clone().into()));
+                            context.emit(AsmNode::Mov(Size::Q, new_r2.into(), r2));
                             lin(context, graph, l)
                         }
                     }
                 }
                 Mbinop::MDiv => {
-                    context.emit_at_label(label.clone(), AsmNode::Cqto);
-                    context.emit(AsmNode::IDivq(r2.clone().into()));
+                    assert_eq!(r2, &Operand::Register(PhysicalRegister::Rax));
+                    context.emit_at_label_or(label, AsmNode::Cqto);
+                    context.emit(AsmNode::IDivq(r1.clone().into()));
                     lin(context, graph, l)
                 }
                 _ => {
                     let (r_or_reg, label) = match r2 {
-                        Operand::Reg(r) => (r, Some(label)),
+                        Operand::Register(r) => (r.clone(), label),
                         Operand::Spilled(_) => {
-                            context.emit_at_label(label.clone(), AsmNode::Mov(Size::Q, r2.clone().into(), TMP_1.into()));
-                            (&TMP_1, None)
+                            let new_r2 = TMP_2;
+                            context.emit_at_label_or(label, AsmNode::Mov(Size::Q, r2.clone().into(), new_r2.clone().into()));
+                            (new_r2, None)
                         }
                     };
-                    context.emit_at_label_or(label.cloned(), AsmNode::Cmp(Size::Q, r1, r_or_reg.clone().into()));
+                    context.emit_at_label_or(label, AsmNode::Cmp(Size::Q, r1, r_or_reg.clone().into()));
                     let size_r_or_reg: SizedPhysicalRegister = (r_or_reg.clone(), Size::B).into();
                     let l = match op {
                         Mbinop::MSete => {
@@ -200,7 +205,7 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
                         _ => unreachable!()
                     };
                     match r2 {
-                        Operand::Reg(_) => {}
+                        Operand::Register(_) => {}
                         Operand::Spilled(_) => {
                             context.emit(AsmNode::Mov(Size::Q, r_or_reg.clone().into(), r2.clone().into()));
                         }
@@ -211,41 +216,41 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
         }
         Instr::EMuBranch(op, r, l1, l2) => {
             match r {
-                Operand::Reg(_) => {
-                    context.emit_at_label(label.clone(), AsmNode::Test(Size::Q, r.clone().into(), r.clone().into()));
-                }
                 Operand::Spilled(_) => {
                     context.emit_at_label(label.clone(), AsmNode::Mov(Size::Q, r.clone().into(), TMP_1.into()));
                     context.emit(AsmNode::Test(Size::Q, TMP_1.into(), TMP_1.into()));
                 }
-            }
+                Operand::Register(_) => {
+                    context.emit_at_label(label.clone(), AsmNode::Test(Size::Q, r.clone().into(), r.clone().into()));
+                }
+            };
             if !context.visited.contains(l2) {
                 match op {
                     MuBranch::MJz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jz(l1.clone()));
+                        context.emit(AsmNode::Jz(l1.clone()));
                         context.need_label(l1.clone());
                         lin(context, graph, l2)?;
                         lin(context, graph, l1)
                     }
                     MuBranch::MJnz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jnz(l1.clone()));
+                        context.emit(AsmNode::Jnz(l1.clone()));
                         context.need_label(l1.clone());
                         lin(context, graph, l2)?;
                         lin(context, graph, l1)
                     }
-                    MuBranch::MJlei(v) => todo!(),
-                    MuBranch::MJgi(v) => todo!(),
+                    MuBranch::MJlei(_) => todo!(),
+                    MuBranch::MJgi(_) => todo!(),
                 }
             } else if !context.visited.contains(l1) {
                 match op {
                     MuBranch::MJz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jnz(l2.clone()));
+                        context.emit(AsmNode::Jnz(l2.clone()));
                         context.need_label(l2.clone());
                         lin(context, graph, l1)?;
                         lin(context, graph, l2)
                     }
                     MuBranch::MJnz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jz(l2.clone()));
+                        context.emit(AsmNode::Jz(l2.clone()));
                         context.need_label(l2.clone());
                         lin(context, graph, l1)?;
                         lin(context, graph, l2)
@@ -256,15 +261,15 @@ fn instr<'a>(context: &mut Context<'a>, graph: &Graph<'a>, label: &Label, instr:
             } else {
                 match op {
                     MuBranch::MJz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jz(l1.clone()));
-                        context.emit_at_label(label.clone(), AsmNode::Jmp(l2.clone()));
+                        context.emit(AsmNode::Jz(l1.clone()));
+                        context.emit(AsmNode::Jmp(l2.clone()));
                         context.need_label(l1.clone());
                         context.need_label(l2.clone());
                         Ok(())
                     }
                     MuBranch::MJnz => {
-                        context.emit_at_label(label.clone(), AsmNode::Jnz(l1.clone()));
-                        context.emit_at_label(label.clone(), AsmNode::Jmp(l2.clone()));
+                        context.emit(AsmNode::Jnz(l1.clone()));
+                        context.emit(AsmNode::Jmp(l2.clone()));
                         context.need_label(l1.clone());
                         context.need_label(l2.clone());
                         Ok(())

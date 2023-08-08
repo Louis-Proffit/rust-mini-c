@@ -1,21 +1,19 @@
 	.text
 	.globl main
 main:
-	movq %rdi, %rdx
-	cmpq %rdi, %rdx
-	sete %dl
-	testq %rdx, %rdx
-	jnz L2850
-L2848:
+	movq %rdx, %rax
+	cmpq %rdx, %rax
+	sete %al
+	testq %rax, %rax
+	jnz L2923
+L2921:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	ret
-L2850:
+L2923:
 	movq $97, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L2848
+	jmp L2921
 	.data
 

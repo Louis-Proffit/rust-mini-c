@@ -14,10 +14,10 @@ main:
 	movq $8, -16(%rbp)
 	movq $9, -8(%rbp)
 	movq $10, %rax
-	pushq -24(%rbp)
-	pushq -16(%rbp)
-	pushq -8(%rbp)
 	pushq %rax
+	pushq -8(%rbp)
+	pushq -16(%rbp)
+	pushq -24(%rbp)
 	call many
 	addq $32, %rsp
 	movq $0, %rax
@@ -34,75 +34,68 @@ many:
 	movq %rcx, -32(%rbp)
 	movq %r8, -40(%rbp)
 	movq %r9, -48(%rbp)
-	movq %r10, 6(%rbp)
-	movq %r10, 7(%rbp)
-	movq %r10, 8(%rbp)
-	movq %r10, 9(%rbp)
+	movq 16(%rbp), %r10
+	movq %r10, -56(%rbp)
+	movq 24(%rbp), %r10
+	movq %r10, -64(%rbp)
+	movq 32(%rbp), %r10
+	movq %r10, -72(%rbp)
+	movq 40(%rbp), %r10
+	movq %r10, -80(%rbp)
 	movq $64, %rdi
-	movq -8(%rbp), %rdx
-	addq %rdx, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -16(%rbp), %rcx
+	movq -8(%rbp), %rcx
 	addq %rcx, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $64, %rdi
-	movq -24(%rbp), %rsi
-	addq %rsi, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -32(%rbp), %r9
-	addq %r9, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -40(%rbp), %rax
-	addq %rax, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -48(%rbp), %rsi
-	addq %rsi, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -56(%rbp), %rax
-	addq %rax, %rdi
-	call putchar
-	addq $0, %rsp
-	movq $64, %rdi
-	movq -64(%rbp), %r8
+	movq -16(%rbp), %r8
 	addq %r8, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $64, %rdi
-	movq -72(%rbp), %rdx
+	movq -24(%rbp), %rdx
 	addq %rdx, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $64, %rdi
-	movq -80(%rbp), %rsi
+	movq -32(%rbp), %rsi
 	addq %rsi, %rdi
 	call putchar
-	addq $0, %rsp
+	movq $64, %rdi
+	movq -40(%rbp), %rdx
+	addq %rdx, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -48(%rbp), %rcx
+	addq %rcx, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -56(%rbp), %rsi
+	addq %rsi, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -64(%rbp), %rcx
+	addq %rcx, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -72(%rbp), %rax
+	addq %rax, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -80(%rbp), %r8
+	addq %r8, %rdi
+	call putchar
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq -8(%rbp), %rax
 	movq $10, -112(%rbp)
 	cmpq -112(%rbp), %rax
 	setl %al
 	testq %rax, %rax
-	jnz L3736
-L3725:
+	jnz L3816
+L3805:
 	movq $0, %rax
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L3736:
+L3816:
 	movq -16(%rbp), %rdi
 	movq -24(%rbp), %rsi
 	movq -32(%rbp), %rdx
@@ -116,12 +109,12 @@ L3736:
 	movq -80(%rbp), %r10
 	movq %r10, -88(%rbp)
 	movq -8(%rbp), %rax
-	pushq -104(%rbp)
-	pushq -96(%rbp)
-	pushq -88(%rbp)
 	pushq %rax
+	pushq -88(%rbp)
+	pushq -96(%rbp)
+	pushq -104(%rbp)
 	call many
 	addq $32, %rsp
-	jmp L3725
+	jmp L3805
 	.data
 

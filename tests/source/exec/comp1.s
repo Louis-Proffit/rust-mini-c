@@ -5,255 +5,222 @@ main:
 	movq %rsp, %rbp
 	addq $-16, %rsp
 	movq $2, -16(%rbp)
-	movq -16(%rbp), %rdi
-	movq $1, -8(%rbp)
-	movq -8(%rbp), %rcx
 	movq -16(%rbp), %r9
+	movq $1, -8(%rbp)
+	movq -8(%rbp), %r8
+	movq -16(%rbp), %rcx
 	movq $1, %rdx
-	cmpq %rdx, %r9
-	setle %r9b
-	testq %r9, %r9
-	jnz L1007
+	cmpq %rdx, %rcx
+	setle %cl
+	testq %rcx, %rcx
+	jnz L1045
 	movq $66, %rdi
 	call putchar
-	addq $0, %rsp
-L1003:
+L1041:
 	movq -16(%rbp), %rsi
 	movq $1, %rdx
 	cmpq %rdx, %rsi
 	setl %sil
 	testq %rsi, %rsi
-	jnz L999
+	jnz L1037
 	movq $68, %rdi
 	call putchar
-	addq $0, %rsp
-L995:
+L1033:
 	movq $1, %rsi
-	movq -16(%rbp), %r9
-	cmpq %r9, %rsi
+	movq -16(%rbp), %rcx
+	cmpq %rcx, %rsi
 	setle %sil
 	testq %rsi, %rsi
-	jnz L991
+	jnz L1029
 	movq $70, %rdi
 	call putchar
-	addq $0, %rsp
-L987:
+L1025:
+	movq $1, %r9
+	movq -16(%rbp), %rax
+	cmpq %rax, %r9
+	setl %r9b
+	testq %r9, %r9
+	jnz L1021
+	movq $72, %rdi
+	call putchar
+L1017:
+	movq -16(%rbp), %rdx
+	movq $1, %rcx
+	cmpq %rcx, %rdx
+	setge %dl
+	testq %rdx, %rdx
+	jnz L1013
+	movq $66, %rdi
+	call putchar
+L1009:
+	movq -16(%rbp), %rsi
+	movq $1, %r8
+	cmpq %r8, %rsi
+	setg %sil
+	testq %rsi, %rsi
+	jnz L1005
+	movq $68, %rdi
+	call putchar
+L1001:
+	movq $1, %rdi
+	movq -16(%rbp), %rsi
+	cmpq %rsi, %rdi
+	setge %dil
+	testq %rdi, %rdi
+	jnz L997
+	movq $70, %rdi
+	call putchar
+L993:
 	movq $1, %rsi
 	movq -16(%rbp), %r9
 	cmpq %r9, %rsi
-	setl %sil
-	testq %rsi, %rsi
-	jnz L983
-	movq $72, %rdi
-	call putchar
-	addq $0, %rsp
-L979:
-	movq -16(%rbp), %rdx
-	movq $1, %rsi
-	cmpq %rsi, %rdx
-	setge %dl
-	testq %rdx, %rdx
-	jnz L975
-	movq $66, %rdi
-	call putchar
-	addq $0, %rsp
-L971:
-	movq -16(%rbp), %rsi
-	movq $1, %rdx
-	cmpq %rdx, %rsi
 	setg %sil
 	testq %rsi, %rsi
-	jnz L967
-	movq $68, %rdi
-	call putchar
-	addq $0, %rsp
-L963:
-	movq $1, %rdx
-	movq -16(%rbp), %r8
-	cmpq %r8, %rdx
-	setge %dl
-	testq %rdx, %rdx
-	jnz L959
-	movq $70, %rdi
-	call putchar
-	addq $0, %rsp
-L955:
-	movq $1, %rdx
-	movq -16(%rbp), %rdi
-	cmpq %rdi, %rdx
-	setg %dl
-	testq %rdx, %rdx
-	jnz L951
+	jnz L989
 	movq $72, %rdi
 	call putchar
-	addq $0, %rsp
-L947:
-	movq $1, %rdx
-	movq $2, %rdi
-	cmpq %rdi, %rdx
-	setl %dl
-	testq %rdx, %rdx
-	jnz L943
+L985:
+	movq $1, %rsi
+	movq $2, %rcx
+	cmpq %rcx, %rsi
+	setl %sil
+	testq %rsi, %rsi
+	jnz L981
 	movq $74, %rdi
 	call putchar
-	addq $0, %rsp
-L939:
-	movq $1, %rdx
-	movq $2, %r9
-	cmpq %r9, %rdx
-	setle %dl
-	testq %rdx, %rdx
-	jnz L935
+L977:
+	movq $1, %rdi
+	movq $2, %rax
+	cmpq %rax, %rdi
+	setle %dil
+	testq %rdi, %rdi
+	jnz L973
 	movq $76, %rdi
 	call putchar
-	addq $0, %rsp
-L931:
+L969:
+	movq $1, %rcx
+	movq $2, %rsi
+	cmpq %rsi, %rcx
+	setg %cl
+	testq %rcx, %rcx
+	jnz L965
+	movq $78, %rdi
+	call putchar
+L961:
 	movq $1, %rax
 	movq $2, %rsi
 	cmpq %rsi, %rax
-	setg %al
+	setge %al
 	testq %rax, %rax
-	jnz L927
-	movq $78, %rdi
-	call putchar
-	addq $0, %rsp
-L923:
-	movq $1, %rdi
-	movq $2, %r8
-	cmpq %r8, %rdi
-	setge %dil
-	testq %rdi, %rdi
-	jnz L919
+	jnz L957
 	movq $80, %rdi
 	call putchar
-	addq $0, %rsp
-L915:
+L953:
 	movq -16(%rbp), %r9
-	movq -8(%rbp), %rdi
-	cmpq %rdi, %r9
+	movq -8(%rbp), %rdx
+	cmpq %rdx, %r9
 	setle %r9b
 	testq %r9, %r9
-	jnz L911
+	jnz L949
 	movq $74, %rdi
 	call putchar
-	addq $0, %rsp
-L907:
-	movq -16(%rbp), %rax
-	movq -8(%rbp), %rcx
-	cmpq %rcx, %rax
-	setl %al
-	testq %rax, %rax
-	jnz L903
-	movq $76, %rdi
-	call putchar
-	addq $0, %rsp
-L899:
-	movq -8(%rbp), %r8
-	movq -16(%rbp), %rsi
-	cmpq %rsi, %r8
-	setle %r8b
-	testq %r8, %r8
-	jnz L895
-	movq $78, %rdi
-	call putchar
-	addq $0, %rsp
-L891:
-	movq -8(%rbp), %rdx
-	movq -16(%rbp), %rcx
-	cmpq %rcx, %rdx
+L945:
+	movq -16(%rbp), %rdx
+	movq -8(%rbp), %r9
+	cmpq %r9, %rdx
 	setl %dl
 	testq %rdx, %rdx
-	jnz L887
+	jnz L941
+	movq $76, %rdi
+	call putchar
+L937:
+	movq -8(%rbp), %rax
+	movq -16(%rbp), %r8
+	cmpq %r8, %rax
+	setle %al
+	testq %rax, %rax
+	jnz L933
+	movq $78, %rdi
+	call putchar
+L929:
+	movq -8(%rbp), %r8
+	movq -16(%rbp), %rax
+	cmpq %rax, %r8
+	setl %r8b
+	testq %r8, %r8
+	jnz L925
 	movq $80, %rdi
 	call putchar
-	addq $0, %rsp
-L883:
+L921:
 	movq $10, %rdi
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L887:
+L925:
 	movq $79, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L883
-L895:
+	jmp L921
+L933:
 	movq $77, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L891
-L903:
+	jmp L929
+L941:
 	movq $75, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L899
-L911:
+	jmp L937
+L949:
 	movq $73, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L907
-L919:
+	jmp L945
+L957:
 	movq $79, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L915
-L927:
+	jmp L953
+L965:
 	movq $77, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L923
-L935:
+	jmp L961
+L973:
 	movq $75, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L931
-L943:
+	jmp L969
+L981:
 	movq $73, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L939
-L951:
+	jmp L977
+L989:
 	movq $71, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L947
-L959:
+	jmp L985
+L997:
 	movq $69, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L955
-L967:
+	jmp L993
+L1005:
 	movq $67, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L963
-L975:
+	jmp L1001
+L1013:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L971
-L983:
+	jmp L1009
+L1021:
 	movq $71, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L979
-L991:
+	jmp L1017
+L1029:
 	movq $69, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L987
-L999:
+	jmp L1025
+L1037:
 	movq $67, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L995
-L1007:
+	jmp L1033
+L1045:
 	movq $65, %rdi
 	call putchar
-	addq $0, %rsp
-	jmp L1003
+	jmp L1041
 	.data
 

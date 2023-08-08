@@ -7,9 +7,7 @@ main:
 	movq $0, %rcx
 	call f
 	movq %rax, %rdi
-	addq $0, %rsp
 	call putchar
-	addq $0, %rsp
 	movq $0, %rax
 	ret
 f:
@@ -21,25 +19,24 @@ f:
 	movq %rdx, -24(%rbp)
 	movq %rcx, -32(%rbp)
 	movq -8(%rbp), %rax
-	cmpq %rax, $0
+	movq $0, %r11
+	cmpq %rax, %r11
 	sete %al
 	testq %rax, %rax
-	jnz L4183
+	jnz L4282
 	movq -8(%rbp), %rdi
 	call putchar
-	addq $0, %rsp
 	movq -16(%rbp), %rdi
 	movq -24(%rbp), %rsi
 	movq -32(%rbp), %rdx
 	movq -8(%rbp), %rcx
 	call f
-	addq $0, %rsp
-L4175:
+L4274:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L4183:
+L4282:
 	movq $10, %rax
-	jmp L4175
+	jmp L4274
 	.data
 
