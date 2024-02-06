@@ -1,4 +1,4 @@
-use nom::error::{Error};
+use nom::error::Error;
 use crate::parser::Input;
 
 #[derive(Debug)]

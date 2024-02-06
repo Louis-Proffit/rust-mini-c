@@ -1,21 +1,21 @@
 	.text
 	.globl main
 main:
-	movq $0, %rax
-	movq %rax, %rdi
+	movq $0, %r9
+	movq %r9, %rcx
 	movq $65, %rdi
 	movq $0, %r11
-	cmpq %rax, %r11
-	sete %al
-	addq %rax, %rdi
+	cmpq %r9, %r11
+	sete %r9b
+	addq %r9, %rdi
 	call putchar
-	movq $1, %rax
-	movq %rax, %r9
+	movq $1, %r9
+	movq %r9, %rcx
 	movq $65, %rdi
 	movq $0, %r11
-	cmpq %rax, %r11
-	sete %al
-	addq %rax, %rdi
+	cmpq %r9, %r11
+	sete %r9b
+	addq %r9, %rdi
 	call putchar
 	movq $10, %rdi
 	call putchar

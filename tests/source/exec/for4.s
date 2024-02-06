@@ -7,14 +7,14 @@ main:
 	movq $10, -8(%rbp)
 	movq -8(%rbp), %rsi
 L2644:
-	movq -8(%rbp), %rax
-	testq %rax, %rax
+	movq -8(%rbp), %r9
+	testq %r9, %r9
 	jz L2634
 	movq $65, %rdi
 	movq $1, %rax
 	subq %rax, -8(%rbp)
-	movq -8(%rbp), %rsi
-	addq %rsi, %rdi
+	movq -8(%rbp), %r8
+	addq %r8, %rdi
 	call putchar
 	jmp L2644
 L2634:

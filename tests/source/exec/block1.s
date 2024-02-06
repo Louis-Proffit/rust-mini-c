@@ -5,16 +5,16 @@ main:
 	movq %rsp, %rbp
 	addq $-8, %rsp
 	movq $65, -8(%rbp)
-	movq -8(%rbp), %rdx
+	movq -8(%rbp), %r8
 	movq -8(%rbp), %rdi
 	call putchar
-	movq $1, %rax
-	testq %rax, %rax
-	jnz L71
+	movq $1, %r9
+	testq %r9, %r9
+	jnz L116
 	movq $67, %rdi
-	movq %rdi, %r9
+	movq %rdi, %r8
 	call putchar
-L18:
+L108:
 	movq -8(%rbp), %rdi
 	call putchar
 	movq $10, %rdi
@@ -23,10 +23,10 @@ L18:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L71:
+L116:
 	movq $66, %rdi
 	movq %rdi, %rax
 	call putchar
-	jmp L18
+	jmp L108
 	.data
 

@@ -2,7 +2,7 @@
 	.globl main
 main:
 	movq $65, %rdi
-	movq %rdi, %rsi
+	movq %rdi, %rcx
 	call putchar
 	movq $10, %rdi
 	call putchar

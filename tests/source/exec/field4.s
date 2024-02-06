@@ -9,14 +9,14 @@ main:
 	movq %rax, -8(%rbp)
 	movq -8(%rbp), %r9
 	movq $65, %r8
-	movq -8(%rbp), %rcx
-	movq %r8, 0(%rcx)
-	movq -8(%rbp), %rcx
-	movq 0(%rcx), %rdi
+	movq -8(%rbp), %rsi
+	movq %r8, 0(%rsi)
+	movq -8(%rbp), %rdx
+	movq 0(%rdx), %rdi
 	call putchar
-	movq $66, %r8
+	movq $66, %rdx
 	movq -8(%rbp), %rcx
-	movq %r8, 8(%rcx)
+	movq %rdx, 8(%rcx)
 	movq -8(%rbp), %rax
 	movq 8(%rax), %rdi
 	call putchar

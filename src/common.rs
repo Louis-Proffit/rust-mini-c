@@ -27,7 +27,7 @@ impl Debug for Stdout {
 }
 
 impl Stdout {
-    pub(crate) fn new() -> Stdout {
+    pub fn new() -> Stdout {
         Stdout { buffer: RefCell::new(Vec::new()) }
     }
 
@@ -35,7 +35,6 @@ impl Stdout {
         self.buffer.borrow_mut().push(char)
     }
 }
-
 
 pub mod bool {
     use crate::common::Value;

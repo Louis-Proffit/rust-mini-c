@@ -5,16 +5,16 @@ main:
 	movq %rsp, %rbp
 	addq $-8, %rsp
 	movq $10, -8(%rbp)
-	movq -8(%rbp), %r9
-L2606:
 	movq -8(%rbp), %rcx
-	testq %rcx, %rcx
+L2606:
+	movq -8(%rbp), %rsi
+	testq %rsi, %rsi
 	jz L2596
 	movq $65, %rdi
-	movq $1, %r8
-	subq %r8, -8(%rbp)
-	movq -8(%rbp), %r9
-	addq %r9, %rdi
+	movq $1, %rax
+	subq %rax, -8(%rbp)
+	movq -8(%rbp), %rcx
+	addq %rcx, %rdi
 	call putchar
 	jmp L2606
 L2596:

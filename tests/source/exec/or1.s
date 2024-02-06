@@ -2,28 +2,28 @@
 	.globl main
 main:
 	movq $65, %rdi
-	movq $1, %rcx
-	testq %rcx, %rcx
+	movq $1, %r8
+	testq %r8, %r8
 	jnz L4087
-	movq $1, %rcx
-	testq %rcx, %rcx
+	movq $1, %r8
+	testq %r8, %r8
 	jz L4086
 L4087:
-	movq $1, %rcx
+	movq $1, %r8
 L4086:
-	addq %rcx, %rdi
+	addq %r8, %rdi
 	call putchar
 	movq $65, %rdi
-	movq $0, %rdx
-	testq %rdx, %rdx
+	movq $0, %rax
+	testq %rax, %rax
 	jnz L4079
-	movq $2, %rdx
-	testq %rdx, %rdx
+	movq $2, %rax
+	testq %rax, %rax
 	jz L4078
 L4079:
-	movq $1, %rdx
+	movq $1, %rax
 L4078:
-	addq %rdx, %rdi
+	addq %rax, %rdi
 	call putchar
 	movq $65, %rdi
 	movq $1, %rcx
@@ -38,16 +38,16 @@ L4070:
 	addq %rcx, %rdi
 	call putchar
 	movq $65, %rdi
-	movq $0, %rsi
-	testq %rsi, %rsi
+	movq $0, %rcx
+	testq %rcx, %rcx
 	jnz L4063
-	movq $0, %rsi
-	testq %rsi, %rsi
+	movq $0, %rcx
+	testq %rcx, %rcx
 	jz L4062
 L4063:
-	movq $1, %rsi
+	movq $1, %rcx
 L4062:
-	addq %rsi, %rdi
+	addq %rcx, %rdi
 	call putchar
 	movq $10, %rdi
 	call putchar

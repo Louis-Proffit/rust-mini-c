@@ -5,20 +5,20 @@ main:
 	movq %rsp, %rbp
 	addq $-8, %rsp
 	movq $0, -8(%rbp)
-	movq -8(%rbp), %rdi
-	movq $1, %r9
-	movq %r9, %r8
-	movq $1, %rax
-	cmpq %rax, %r9
-	sete %r9b
-	testq %r9, %r9
+	movq -8(%rbp), %r8
+	movq $1, %rcx
+	movq %rcx, %rdi
+	movq $1, %rdi
+	cmpq %rdi, %rcx
+	sete %cl
+	testq %rcx, %rcx
 	jnz L4425
 L4423:
-	movq -8(%rbp), %r9
-	movq $0, %rsi
-	cmpq %rsi, %r9
-	sete %r9b
-	testq %r9, %r9
+	movq -8(%rbp), %rsi
+	movq $0, %rax
+	cmpq %rax, %rsi
+	sete %sil
+	testq %rsi, %rsi
 	jnz L4419
 L4417:
 	movq $10, %rdi

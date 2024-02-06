@@ -1,29 +1,5 @@
 	.text
 	.globl main
-main:
-	pushq %rbp
-	movq %rsp, %rbp
-	addq $-24, %rsp
-	movq $1, %rdi
-	movq $2, %rsi
-	movq $3, %rdx
-	movq $4, %rcx
-	movq $5, %r8
-	movq $6, %r9
-	movq $7, -24(%rbp)
-	movq $8, -16(%rbp)
-	movq $9, -8(%rbp)
-	movq $10, %rax
-	pushq %rax
-	pushq -8(%rbp)
-	pushq -16(%rbp)
-	pushq -24(%rbp)
-	call many
-	addq $32, %rsp
-	movq $0, %rax
-	movq %rbp, %rsp
-	popq %rbp
-	ret
 many:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -43,44 +19,44 @@ many:
 	movq 40(%rbp), %r10
 	movq %r10, -80(%rbp)
 	movq $64, %rdi
-	movq -8(%rbp), %rcx
-	addq %rcx, %rdi
+	movq -8(%rbp), %rsi
+	addq %rsi, %rdi
 	call putchar
 	movq $64, %rdi
-	movq -16(%rbp), %r8
-	addq %r8, %rdi
-	call putchar
-	movq $64, %rdi
-	movq -24(%rbp), %rdx
+	movq -16(%rbp), %rdx
 	addq %rdx, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -24(%rbp), %rax
+	addq %rax, %rdi
 	call putchar
 	movq $64, %rdi
 	movq -32(%rbp), %rsi
 	addq %rsi, %rdi
 	call putchar
 	movq $64, %rdi
-	movq -40(%rbp), %rdx
-	addq %rdx, %rdi
-	call putchar
-	movq $64, %rdi
-	movq -48(%rbp), %rcx
-	addq %rcx, %rdi
-	call putchar
-	movq $64, %rdi
-	movq -56(%rbp), %rsi
+	movq -40(%rbp), %rsi
 	addq %rsi, %rdi
 	call putchar
 	movq $64, %rdi
-	movq -64(%rbp), %rcx
+	movq -48(%rbp), %r9
+	addq %r9, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -56(%rbp), %rcx
 	addq %rcx, %rdi
 	call putchar
 	movq $64, %rdi
-	movq -72(%rbp), %rax
+	movq -64(%rbp), %rax
 	addq %rax, %rdi
 	call putchar
 	movq $64, %rdi
-	movq -80(%rbp), %r8
-	addq %r8, %rdi
+	movq -72(%rbp), %rsi
+	addq %rsi, %rdi
+	call putchar
+	movq $64, %rdi
+	movq -80(%rbp), %rsi
+	addq %rsi, %rdi
 	call putchar
 	movq $10, %rdi
 	call putchar
@@ -116,5 +92,29 @@ L3816:
 	call many
 	addq $32, %rsp
 	jmp L3805
+main:
+	pushq %rbp
+	movq %rsp, %rbp
+	addq $-24, %rsp
+	movq $1, %rdi
+	movq $2, %rsi
+	movq $3, %rdx
+	movq $4, %rcx
+	movq $5, %r8
+	movq $6, %r9
+	movq $7, -24(%rbp)
+	movq $8, -16(%rbp)
+	movq $9, -8(%rbp)
+	movq $10, %rax
+	pushq %rax
+	pushq -8(%rbp)
+	pushq -16(%rbp)
+	pushq -24(%rbp)
+	call many
+	addq $32, %rsp
+	movq $0, %rax
+	movq %rbp, %rsp
+	popq %rbp
+	ret
 	.data
 

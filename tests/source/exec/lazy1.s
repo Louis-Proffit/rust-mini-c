@@ -1,6 +1,23 @@
 	.text
 	.globl main
-any:
+zero:
+	pushq %rbp
+	movq %rsp, %rbp
+	addq $-32, %rsp
+	movq $10, %rax
+	movq %rax, -32(%rbp)
+L3491:
+	movq %rax, -24(%rbp)
+	movq -24(%rbp), %r10
+	testq %r10, %r10
+	jz L3484
+	movq $1, -16(%rbp)
+	subq -16(%rbp), %rax
+	movq %rax, -8(%rbp)
+	jmp L3491
+L3484:
+	movq %rbp, %rsp
+	popq %rbp
 	ret
 main:
 	pushq %rbp
@@ -255,24 +272,11 @@ L3472:
 	jmp L3470
 	jmp L3473
 	jmp L3473
-zero:
-	pushq %rbp
-	movq %rsp, %rbp
-	addq $-32, %rsp
-	movq $10, %rax
-	movq %rax, -32(%rbp)
-L3487:
-	movq %rax, -24(%rbp)
-	movq -24(%rbp), %r10
-	testq %r10, %r10
-	jz L3480
-	movq $1, -16(%rbp)
-	subq -16(%rbp), %rax
-	movq %rax, -8(%rbp)
-	jmp L3487
-L3480:
-	movq %rbp, %rsp
-	popq %rbp
+true:
+	call zero
+	movq $0, %r11
+	cmpq %rax, %r11
+	sete %al
 	ret
 false:
 	call zero
@@ -293,11 +297,7 @@ fail:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-true:
-	call zero
-	movq $0, %r11
-	cmpq %rax, %r11
-	sete %al
+any:
 	ret
 	.data
 

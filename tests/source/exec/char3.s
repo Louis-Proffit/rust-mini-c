@@ -5,12 +5,12 @@ main:
 	movq %rsp, %rbp
 	addq $-8, %rsp
 	movq $65, -8(%rbp)
-	movq -8(%rbp), %rcx
+	movq -8(%rbp), %rdx
 	movq -8(%rbp), %rdi
 	call putchar
-	movq $1, %rdi
-	addq %rdi, -8(%rbp)
-	movq -8(%rbp), %rdi
+	movq $1, %rax
+	addq %rax, -8(%rbp)
+	movq -8(%rbp), %r8
 	movq -8(%rbp), %rdi
 	call putchar
 	movq $10, %rdi

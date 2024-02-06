@@ -1,42 +1,5 @@
 	.text
 	.globl main
-afficher:
-	pushq %rbp
-	movq %rsp, %rbp
-	addq $-16, %rsp
-	movq %rdi, -8(%rbp)
-	movq -8(%rbp), %r10
-	movq %r10, -16(%rbp)
-	movq -16(%rbp), %r8
-	movq -16(%rbp), %r8
-	movq 0(%r8), %rdi
-	call putchar
-	movq -16(%rbp), %r8
-	movq 8(%r8), %r11
-	movq %r11, -16(%rbp)
-	movq -16(%rbp), %rdi
-L1211:
-	movq -16(%rbp), %rsi
-	movq -8(%rbp), %r9
-	cmpq %r9, %rsi
-	setne %sil
-	testq %rsi, %rsi
-	jz L1200
-	movq -16(%rbp), %r9
-	movq 0(%r9), %rdi
-	call putchar
-	movq -16(%rbp), %rax
-	movq 8(%rax), %r11
-	movq %r11, -16(%rbp)
-	movq -16(%rbp), %r8
-	jmp L1211
-L1200:
-	movq $10, %rdi
-	call putchar
-	movq $0, %rax
-	movq %rbp, %rsp
-	popq %rbp
-	ret
 make:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -63,6 +26,43 @@ make:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
+afficher:
+	pushq %rbp
+	movq %rsp, %rbp
+	addq $-16, %rsp
+	movq %rdi, -8(%rbp)
+	movq -8(%rbp), %r10
+	movq %r10, -16(%rbp)
+	movq -16(%rbp), %rax
+	movq -16(%rbp), %r8
+	movq 0(%r8), %rdi
+	call putchar
+	movq -16(%rbp), %r8
+	movq 8(%r8), %r11
+	movq %r11, -16(%rbp)
+	movq -16(%rbp), %rcx
+L1224:
+	movq -16(%rbp), %r9
+	movq -8(%rbp), %rcx
+	cmpq %rcx, %r9
+	setne %r9b
+	testq %r9, %r9
+	jz L1213
+	movq -16(%rbp), %r9
+	movq 0(%r9), %rdi
+	call putchar
+	movq -16(%rbp), %rsi
+	movq 8(%rsi), %r11
+	movq %r11, -16(%rbp)
+	movq -16(%rbp), %r8
+	jmp L1224
+L1213:
+	movq $10, %rdi
+	call putchar
+	movq $0, %rax
+	movq %rbp, %rsp
+	popq %rbp
+	ret
 main:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -70,7 +70,7 @@ main:
 	movq $65, %rdi
 	call make
 	movq %rax, -8(%rbp)
-	movq -8(%rbp), %rdx
+	movq -8(%rbp), %rsi
 	movq -8(%rbp), %rdi
 	call afficher
 	movq -8(%rbp), %rdi
@@ -83,38 +83,11 @@ main:
 	call inserer_apres
 	movq -8(%rbp), %rdi
 	call afficher
-	movq -8(%rbp), %rcx
-	movq 8(%rcx), %rdi
+	movq -8(%rbp), %rdi
+	movq 8(%rdi), %rdi
 	call supprimer
 	movq -8(%rbp), %rdi
 	call afficher
-	movq $0, %rax
-	movq %rbp, %rsp
-	popq %rbp
-	ret
-supprimer:
-	pushq %rbp
-	movq %rsp, %rbp
-	addq $-48, %rsp
-	movq %rdi, %rax
-	movq %rax, -48(%rbp)
-	movq -48(%rbp), %r10
-	movq 8(%r10), %r11
-	movq %r11, -24(%rbp)
-	movq %rax, -40(%rbp)
-	movq -40(%rbp), %r10
-	movq 16(%r10), %r11
-	movq %r11, -32(%rbp)
-	movq -32(%rbp), %r10
-	movq -24(%rbp), %r11
-	movq %r11, 8(%r10)
-	movq %rax, -16(%rbp)
-	movq -16(%rbp), %r10
-	movq 16(%r10), %r11
-	movq %r11, -8(%rbp)
-	movq 8(%rax), %rax
-	movq -8(%rbp), %r11
-	movq %r11, 16(%rax)
 	movq $0, %rax
 	movq %rbp, %rsp
 	popq %rbp
@@ -153,6 +126,33 @@ inserer_apres:
 	movq -8(%rbp), %r10
 	movq %r10, -16(%rbp)
 	movq -16(%rbp), %r11
+	movq %r11, 16(%rax)
+	movq $0, %rax
+	movq %rbp, %rsp
+	popq %rbp
+	ret
+supprimer:
+	pushq %rbp
+	movq %rsp, %rbp
+	addq $-48, %rsp
+	movq %rdi, %rax
+	movq %rax, -48(%rbp)
+	movq -48(%rbp), %r10
+	movq 8(%r10), %r11
+	movq %r11, -24(%rbp)
+	movq %rax, -40(%rbp)
+	movq -40(%rbp), %r10
+	movq 16(%r10), %r11
+	movq %r11, -32(%rbp)
+	movq -32(%rbp), %r10
+	movq -24(%rbp), %r11
+	movq %r11, 8(%r10)
+	movq %rax, -16(%rbp)
+	movq -16(%rbp), %r10
+	movq 16(%r10), %r11
+	movq %r11, -8(%rbp)
+	movq 8(%rax), %rax
+	movq -8(%rbp), %r11
 	movq %r11, 16(%rax)
 	movq $0, %rax
 	movq %rbp, %rsp

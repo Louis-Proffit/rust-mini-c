@@ -14,8 +14,8 @@ L5021:
 	subq %rax, -8(%rbp)
 	movq -8(%rbp), %rax
 	movq $65, %rdi
-	movq -8(%rbp), %rax
-	addq %rax, %rdi
+	movq -8(%rbp), %rcx
+	addq %rcx, %rdi
 	call putchar
 	jmp L5021
 L5010:

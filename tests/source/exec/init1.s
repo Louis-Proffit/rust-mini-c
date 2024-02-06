@@ -1,8 +1,8 @@
 	.text
 	.globl main
 main:
-	movq %rdx, %rax
-	cmpq %rdx, %rax
+	movq %rcx, %rax
+	cmpq %rcx, %rax
 	sete %al
 	testq %rax, %rax
 	jnz L2923

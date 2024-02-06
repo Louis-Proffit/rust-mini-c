@@ -1,20 +1,16 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
-use derive_new::new;
-use derive_getters::Getters;
 use crate::common::{Ident, Stdout};
 use crate::typer::interpreter::{interp_block, TyperInterpreterResult, Value};
 use crate::typer::structure::{BlockIdent, Fun};
 
 const DEFAULT_FIELD_VALUE: Value = 0;
+pub type InterpreterFunctions<'a> = HashMap<Ident<'a>, Box<dyn TyperInterpreterFun<'a> + 'a>>;
 
-#[derive(new, Getters)]
-pub struct Context<'a> {
-    pub vars: MemoryVar<'a>,
-    pub memory: Rc<RefCell<HashMap<Value, RefCell<MemoryStruct<'a>>>>>,
-    pub functions: Rc<HashMap<Ident<'a>, Box<dyn TyperInterpreterFun<'a> + 'a>>>,
-    pub stdout: Rc<RefCell<Stdout>>,
+pub type InterpreterMemory<'a> = HashMap<Value, MemoryStruct<'a>>;
+
+pub enum InterpreterContext<'a> {
+    Root,
+    Node(HashMap<BlockIdent<'a>, Value>, Box<InterpreterContext<'a>>)
 }
 
 #[derive(Debug)]
@@ -22,27 +18,37 @@ pub struct MemoryVar<'a> {
     pub vars: HashMap<BlockIdent<'a>, Value>,
 }
 
-impl<'x> MemoryVar<'x> {
-    pub fn new<'b>() -> MemoryVar<'b> {
-        MemoryVar { vars: HashMap::new() }
-    }
-
-    pub fn get<'a: 'x>(&mut self, ident: BlockIdent<'a>) -> Value {
-        if !self.vars.contains_key(&ident) {
-            self.vars.insert(ident.clone(), DEFAULT_FIELD_VALUE);
-        }
-
-        *self.vars.get(&ident).unwrap()
-    }
-
-    pub fn set<'a: 'x>(&mut self, ident: BlockIdent<'a>, value: Value) {
-        self.vars.insert(ident, value);
-    }
-}
-
 #[derive(Debug)]
 pub struct MemoryStruct<'a> {
     pub fields: HashMap<Ident<'a>, Value>,
+}
+
+impl<'x> InterpreterContext<'x> {
+
+    pub fn new() -> InterpreterContext<'x>{
+        return InterpreterContext::Node(HashMap::new(), Box::new(InterpreterContext::Root))
+    }
+
+    pub fn get(&self, ident: BlockIdent<'x>) -> Value {
+        match self {
+            InterpreterContext::Root => {
+                DEFAULT_FIELD_VALUE
+            },
+            InterpreterContext::Node(scope, parent) => {
+                scope.get(&ident)
+                .map_or_else(|| parent.get(ident),|value| *value)
+            }
+        }
+    }
+
+    pub fn set(&mut self, ident: BlockIdent<'x>, value: Value) {
+        match self {
+            InterpreterContext::Root => {},
+            InterpreterContext::Node(scope, parent) => {
+                let _ = scope.insert(ident, value);
+            }
+        }
+    }
 }
 
 impl<'x> MemoryStruct<'x> {
@@ -50,13 +56,9 @@ impl<'x> MemoryStruct<'x> {
         MemoryStruct { fields: HashMap::new() }
     }
 
-    pub fn get<'a: 'x>(&mut self, ident: Ident<'a>) -> Value {
-        if self.fields.contains_key(ident) {
-            *self.fields.get(ident).unwrap()
-        } else {
-            self.fields.insert(ident, DEFAULT_FIELD_VALUE);
-            DEFAULT_FIELD_VALUE
-        }
+    pub fn get<'a: 'x>(&self, ident: Ident<'a>) -> Value {
+        self.fields.get(ident)
+        .map_or_else(|| DEFAULT_FIELD_VALUE, |value| *value)
     }
 
     pub fn set<'a: 'x>(&mut self, ident: Ident<'a>, value: Value) {
@@ -65,11 +67,11 @@ impl<'x> MemoryStruct<'x> {
 }
 
 pub trait TyperInterpreterFun<'a> {
-    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>>;
+    fn call(&self, context: &mut InterpreterContext<'a>, functions:&InterpreterFunctions<'a>, memory: &mut InterpreterMemory<'a>, stdout:&mut Stdout) -> TyperInterpreterResult<Option<Value>>;
 }
 
 impl<'a> TyperInterpreterFun<'a> for &'a Fun<'a> {
-    fn call(&self, context: &mut Context<'a>) -> TyperInterpreterResult<Option<Value>> {
-        interp_block(context, self.block())
+    fn call(&self, context: &mut InterpreterContext<'a>, functions:&InterpreterFunctions<'a>, memory: &mut InterpreterMemory<'a>, stdout:&mut Stdout) -> TyperInterpreterResult<Option<Value>> {
+        interp_block(context, functions, memory, stdout, self.block())
     }
 }

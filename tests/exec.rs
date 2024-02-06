@@ -2,8 +2,9 @@
 
 use std::fs::{File, read_to_string};
 use std::process::Command;
-use rust_mini_c::{minic_parse};
 use std::io::Write;
+
+use rust_mini_c::parser::parse_file;
 
 macro_rules! test_bad {
     ($($name:ident: $path:literal,)*) => {
@@ -37,7 +38,7 @@ fn _test_bad(path: &str) {
     println!("File {}", path);
 
     let file = read_to_string(path).expect("Failed to read file");
-    minic_parse(&file)
+    parse_file(&file)
         .expect("Failed to parse file")
         .minic_typ()
         .expect("Failed to typ file")
@@ -53,7 +54,7 @@ fn _test_good(base_path: &str) {
     let file = read_to_string(format!("{}.c", base_path)).expect("Failed to read source file");
     let expected = read_to_string(format!("{}.out", base_path)).expect("Failed to read expected file");
 
-    let parsed = minic_parse(&file)
+    let parsed = parse_file(&file)
         .expect("Failed to parse file");
 
     let typed = parsed.minic_typ()

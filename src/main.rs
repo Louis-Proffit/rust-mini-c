@@ -5,7 +5,7 @@ use rust_mini_c::liveness::liveness_graph;
 use rust_mini_c::liveness::structure::DisplayableLivenessGraph;
 use rust_mini_c::coloring::color_graph;
 use rust_mini_c::interference::interference_graph;
-use rust_mini_c::minic_parse;
+use rust_mini_c::parser::parse_file;
 
 fn main() {
     let matches = Command::new("minic")
@@ -18,8 +18,7 @@ fn main() {
         )
         .arg(
             Arg::new("output")
-                .short('o')
-                .long("output")
+                .required(true)
         )
         .arg(
             Arg::new("debug-parser")
@@ -64,7 +63,7 @@ fn main() {
     let output = matches.get_one::<String>("output").expect("required");
 
     let content = read_to_string(file_path).expect("Failed to read file");
-    let _ = minic_parse(&content)
+    let _ = parse_file(&content)
         .map(|file| {
             if debug_parser {
                 println!("Parsed file : {:?}", file);

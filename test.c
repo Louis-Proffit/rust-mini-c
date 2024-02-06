@@ -3,5 +3,5 @@ int fact(int n) {
   return n * fact(n-1);
 }
 int main() {
-  return fact(42);
+  return 0;
 }

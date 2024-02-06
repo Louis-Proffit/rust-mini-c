@@ -1,15 +1,5 @@
 	.text
 	.globl main
-main:
-	movq $65, %rdi
-	movq $66, %rsi
-	movq $67, %rdx
-	movq $0, %rcx
-	call f
-	movq $10, %rdi
-	call putchar
-	movq $0, %rax
-	ret
 f:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -20,13 +10,13 @@ f:
 	movq %rcx, -32(%rbp)
 	movq -8(%rbp), %rax
 	testq %rax, %rax
-	jnz L1984
+	jnz L1993
 	movq $0, %rax
-L1976:
+L1985:
 	movq %rbp, %rsp
 	popq %rbp
 	ret
-L1984:
+L1993:
 	movq -8(%rbp), %rdi
 	call putchar
 	movq -16(%rbp), %rdi
@@ -34,6 +24,16 @@ L1984:
 	movq -32(%rbp), %rdx
 	movq -8(%rbp), %rcx
 	call f
-	jmp L1976
+	jmp L1985
+main:
+	movq $65, %rdi
+	movq $66, %rsi
+	movq $67, %rdx
+	movq $0, %rcx
+	call f
+	movq $10, %rdi
+	call putchar
+	movq $0, %rax
+	ret
 	.data
 

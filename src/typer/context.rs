@@ -139,7 +139,7 @@ impl BlockContext<'_> {
         let index = parent.fresh_index();
 
         for (name, _) in &vars {
-            parent.declare(BlockIdent::Local(index, name.clone()))
+            parent.declare(BlockIdent::Local(index, name))
         }
 
         BlockContext {

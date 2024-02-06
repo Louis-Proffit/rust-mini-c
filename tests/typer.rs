@@ -1,7 +1,8 @@
 #![feature(assert_matches)]
 
-use std::fs::{read_to_string};
-use rust_mini_c::{minic_parse};
+use std::fs::read_to_string;
+
+use rust_mini_c::parser::parse_file;
 
 macro_rules! test_typing_bad {
     ($($name:ident: $path:literal,)*) => {
@@ -31,7 +32,7 @@ fn _test_typing_bad(path: &str) {
     println!("File {}", path);
 
     let file = read_to_string(path).expect("Failed to read file");
-    match minic_parse(&file)
+    match parse_file(&file)
         .expect("Failed to parse")
         .minic_typ() {
         Ok(file) => {
@@ -46,7 +47,7 @@ fn _test_typing_good(path: &str) {
     println!("File {}", path);
 
     let file = read_to_string(path).expect("Failed to read file");
-    match minic_parse(&file)
+    match parse_file(&file)
         .expect("Failed to parse")
         .minic_typ() {
         Ok(_) => {}

@@ -23,12 +23,12 @@ main:
 	movq $3, %rsi
 	call f
 	movq %rax, -8(%rbp)
-	movq -8(%rbp), %rdx
+	movq -8(%rbp), %rsi
 	movq -8(%rbp), %rdi
 	call putchar
-	movq $1, %rcx
-	addq %rcx, -8(%rbp)
-	movq -8(%rbp), %rdx
+	movq $1, %r9
+	addq %r9, -8(%rbp)
+	movq -8(%rbp), %rax
 	movq -8(%rbp), %rdi
 	call putchar
 	movq $10, %rdi

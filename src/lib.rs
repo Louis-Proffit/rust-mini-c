@@ -26,10 +26,6 @@ use crate::rtl::interpreter::{interp_rtl_file, RtlInterpreterResult};
 use crate::typer::{typ_file, TypResult};
 use crate::typer::interpreter::{interp_typed_file, TyperInterpreterResult};
 
-pub fn minic_parse(input: &str) -> ParserResult {
-    parse_file(input)
-}
-
 impl parser::structure::File<'_> {
     pub fn minic_typ(&self) -> TypResult<typer::structure::File> {
         typ_file(self)

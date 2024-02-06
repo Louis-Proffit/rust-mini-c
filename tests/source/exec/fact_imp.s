@@ -3,24 +3,24 @@
 main:
 	movq $0, %rdi
 	call fact_imp
-	movq $1, %rdx
-	cmpq %rdx, %rax
+	movq $1, %rsi
+	cmpq %rsi, %rax
 	sete %al
 	testq %rax, %rax
 	jnz L2201
 L2199:
 	movq $1, %rdi
 	call fact_imp
-	movq $1, %rsi
-	cmpq %rsi, %rax
+	movq $1, %rdx
+	cmpq %rdx, %rax
 	sete %al
 	testq %rax, %rax
 	jnz L2194
 L2192:
 	movq $5, %rdi
 	call fact_imp
-	movq $120, %rdi
-	cmpq %rdi, %rax
+	movq $120, %rcx
+	cmpq %rcx, %rax
 	sete %al
 	testq %rax, %rax
 	jnz L2187

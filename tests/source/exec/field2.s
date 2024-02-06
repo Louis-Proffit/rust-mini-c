@@ -7,18 +7,18 @@ main:
 	movq $16, %rdi
 	call malloc
 	movq %rax, -8(%rbp)
-	movq -8(%rbp), %rdi
-	movq $65, %rcx
-	movq -8(%rbp), %rdi
-	movq %rcx, 0(%rdi)
-	movq -8(%rbp), %rcx
-	movq 0(%rcx), %rdi
+	movq -8(%rbp), %rsi
+	movq $65, %rsi
+	movq -8(%rbp), %r8
+	movq %rsi, 0(%r8)
+	movq -8(%rbp), %r8
+	movq 0(%r8), %rdi
 	call putchar
-	movq $66, %r8
-	movq -8(%rbp), %rcx
-	movq %r8, 8(%rcx)
-	movq -8(%rbp), %rdi
-	movq 8(%rdi), %rdi
+	movq $66, %rcx
+	movq -8(%rbp), %r8
+	movq %rcx, 8(%r8)
+	movq -8(%rbp), %rdx
+	movq 8(%rdx), %rdi
 	call putchar
 	movq $10, %rdi
 	call putchar

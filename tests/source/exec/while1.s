@@ -5,21 +5,21 @@ main:
 	movq %rsp, %rbp
 	addq $-8, %rsp
 	movq $10, -8(%rbp)
-	movq -8(%rbp), %r8
-L4897:
-	movq $1, %rdx
-	subq %rdx, -8(%rbp)
-	movq -8(%rbp), %rax
+	movq -8(%rbp), %r9
+L4905:
 	movq $1, %rcx
-	addq %rcx, %rax
-	testq %rax, %rax
-	jz L4885
+	subq %rcx, -8(%rbp)
+	movq -8(%rbp), %r9
+	movq $1, %rax
+	addq %rax, %r9
+	testq %r9, %r9
+	jz L4893
 	movq $65, %rdi
-	movq -8(%rbp), %rsi
-	addq %rsi, %rdi
+	movq -8(%rbp), %rcx
+	addq %rcx, %rdi
 	call putchar
-	jmp L4897
-L4885:
+	jmp L4905
+L4893:
 	movq $10, %rdi
 	call putchar
 	movq $0, %rax

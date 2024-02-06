@@ -1,5 +1,6 @@
-use std::fs::{read_to_string};
-use rust_mini_c::{minic_parse};
+use std::fs::read_to_string;
+
+use rust_mini_c::parser::parse_file;
 
 macro_rules! test_syntax_bad {
     ($($name:ident: $path:literal,)*) => {
@@ -29,7 +30,7 @@ fn _test_syntax_bad(path: &str) {
     println!("File {}", path);
 
     let file = read_to_string(path).expect("Failed to read file");
-    match minic_parse(&file) {
+    match parse_file(&file) {
         Ok(ok) => {
             println!("{:?}", ok);
             assert!(false);
@@ -42,7 +43,7 @@ fn _test_syntax_good(path: &str) {
     println!("File {}", path);
 
     let file = read_to_string(path).expect("Failed to read file");
-    match minic_parse(&file) {
+    match parse_file(&file) {
         Ok(_) => {}
         Err(err) => {
             println!("{:?}", err);
